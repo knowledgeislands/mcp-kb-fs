@@ -1,3 +1,3 @@
 #!/bin/sh
 eval "$(fnm env)"
-exec node /Users/krisbrown/mcps/hnrkb-mcp-server/dist/index.js
+exec node $HOME/mcps/hnr-knowledge-base-mcp-server/dist/index.js
