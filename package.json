@@ -22,7 +22,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf {dist,node_modules}",
     "dev:mcp": "tsx watch src/index.ts",
     "format": "npx biome format --write",
