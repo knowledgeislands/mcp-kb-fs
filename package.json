@@ -1,25 +1,44 @@
 {
-  "name": "hnrkb-mcp-server",
+  "name": "mcp-kb",
+  "description": "MCP server for readonly access to a local directory of markdown files as a knowledge base",
   "version": "1.0.0",
-  "description": "Local stdio MCP server — read-only access to the HNR Knowledge Base vault",
-  "type": "module",
-  "main": "dist/index.js",
-  "scripts": {
-    "start": "node dist/index.js",
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "clean": "rm -rf dist"
-  },
-  "engines": {
-    "node": ">=18"
-  },
+  "author": "kris@kris.me.uk",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.6.1",
-    "zod": "^3.23.8"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.1"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
-  }
+    "@biomejs/biome": "2.4.13",
+    "@types/node": "^25.6.0",
+    "biome": "^0.3.3",
+    "prettier": "^3.8.3",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "clean": "rm -rf {dist,node_modules}",
+    "dev:mcp": "tsx watch src/index.ts",
+    "format": "npx biome format --write",
+    "inspect": "npx @modelcontextprotocol/inspector tsx src/mcp-server/index.ts",
+    "lint:check": "npx biome check",
+    "lint:deps:missing": "npx depcheck --json | npx node-jq --sort-keys '.' | npx node-jq '.missing | keys | .[]' | xargs npm add -D",
+    "lint:deps:unused": "npx depcheck --json | npx node-jq --sort-keys '.' | npx node-jq '.devDependencies[]' | xargs npm uninstall",
+    "lint:fix": "npx biome check --write --unsafe",
+    "lint:md": "npx prettier --write \"**/*.md\" --ignore-path .gitignore && npx markdownlint-cli2",
+    "lint:package": "npx syncpack format",
+    "prestart:mcp": "npm run build",
+    "start:mcp": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "update:libs": "npx npm-check-updates"
+  },
+  "type": "module"
 }
