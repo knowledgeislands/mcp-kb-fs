@@ -11,6 +11,7 @@
  *   KB_ROOT_PATH    Absolute or ~ path to the vault root.
  */
 
+import { strict as assert } from 'node:assert'
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
@@ -27,6 +28,7 @@ function expandHome(p: string): string {
   return p.startsWith('~/') ? path.join(os.homedir(), p.slice(2)) : p
 }
 
+console.log(`mcp-kb starting... at ${process.env.KB_ROOT_PATH}`)
 assert(process.env.KB_ROOT_PATH, 'KB_ROOT_PATH environment variable must be set')
 const VAULT_ROOT = path.resolve(expandHome(process.env.KB_ROOT_PATH))
 
@@ -84,7 +86,7 @@ server.registerTool(
 
 Args:
   - path (string): Vault-relative path to the note.
-    Example: "Pillars/Productivity/Knowledge Management/KB Specifics/Email/Email Routing Queue.md"
+    Example: "CLAUDE.md"
 
 Returns:
   The raw markdown text of the file.
@@ -203,7 +205,7 @@ server.registerTool(
 
 Args:
   - path (string): Vault-relative path to the note.
-    Example: "Pillars/Productivity/Knowledge Management/KB Specifics/Email/Email Status.md"
+    Example: "CLAUDE.md"
   - content (string): Full markdown content to write to the file.
   - create_dirs (boolean): Create parent directories if they do not exist. Default true.
 
@@ -215,7 +217,7 @@ Errors:
   - "Directory not found" when create_dirs is false and the parent directory does not exist.`,
     inputSchema: z
       .object({
-        path: z.string().min(1, 'Path must not be empty').describe('Vault-relative path to the note, e.g. "Pillars/Finance/Budget.md"'),
+        path: z.string().min(1, 'Path must not be empty').describe('Vault-relative path to the note, e.g. "CLAUDE.md"'),
         content: z.string().describe('Full markdown content to write to the file.'),
         create_dirs: z.boolean().default(true).describe('Create parent directories if they do not exist. Default true.')
       })
