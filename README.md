@@ -183,7 +183,3 @@ Add a new tool by registering it in [`src/index.ts`](./src/index.ts) via `server
 4. Return errors via `errorResult(...)` so the client sees `isError: true`.
 
 If `src/notes.ts` grows beyond a comfortable size, split handlers into additional modules under `src/` and re-import them from `src/index.ts`.
-
-## License
-
-MIT.
