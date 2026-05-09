@@ -1,8 +1,17 @@
 {
-  "name": "mcp-kb",
+  "name": "@knowledgeislands/mcp-kb",
   "description": "MCP for markdown based knowledge bases on a local filesystem",
   "version": "1.0.0",
   "author": "kris@kris.me.uk",
+  "homepage": "https://github.com/knowledgeislands/mcp-kb#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/knowledgeislands/mcp-kb.git"
+  },
+  "bugs": {
+    "url": "https://github.com/knowledgeislands/mcp-kb/issues"
+  },
+  "keywords": ["mcp", "model-context-protocol", "knowledge-base", "markdown", "claude", "anthropic"],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.4.1"
@@ -22,7 +31,6 @@
     "node": ">=22.0.0"
   },
   "license": "MIT",
-  "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf {dist,node_modules}",
