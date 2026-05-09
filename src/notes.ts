@@ -2,11 +2,11 @@ import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { VAULT_ROOT } from './config.ts'
-import { errorResult, isNodeError, resolveVaultPath } from './utils.ts'
+import { errorResult, isNodeError, resolveWithinRoot } from './utils.ts'
 
 export async function readNote({ path: notePath }: { path: string }) {
   try {
-    const absPath = resolveVaultPath(notePath)
+    const absPath = resolveWithinRoot(VAULT_ROOT, notePath)
     const content = await fs.readFile(absPath, 'utf-8')
     return { content: [{ type: 'text' as const, text: content }] }
   } catch (err) {
@@ -20,7 +20,7 @@ export async function readNote({ path: notePath }: { path: string }) {
 
 export async function listNotes({ path: dirPath, recursive }: { path: string; recursive: boolean }) {
   try {
-    const absDir = dirPath ? resolveVaultPath(dirPath) : VAULT_ROOT
+    const absDir = dirPath ? resolveWithinRoot(VAULT_ROOT, dirPath) : VAULT_ROOT
     const notes = await collectNotes(absDir, recursive)
     const relative = notes.map((p) => path.relative(VAULT_ROOT, p))
     return {
@@ -39,7 +39,7 @@ export async function listNotes({ path: dirPath, recursive }: { path: string; re
 
 export async function writeNote({ path: notePath, content, create_dirs }: { path: string; content: string; create_dirs: boolean }) {
   try {
-    const absPath = resolveVaultPath(notePath)
+    const absPath = resolveWithinRoot(VAULT_ROOT, notePath)
     if (create_dirs) {
       await fs.mkdir(path.dirname(absPath), { recursive: true })
     }

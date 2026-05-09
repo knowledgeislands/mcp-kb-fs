@@ -1,16 +1,15 @@
 import * as path from 'node:path'
-import { VAULT_ROOT } from './config.ts'
 
 /**
- * Resolve a vault-relative path to an absolute path, rejecting any attempt
- * to escape the vault root via `..` or symlink tricks.
+ * Resolve a relative path against a root directory and reject any traversal
+ * outside that root.
  */
-export function resolveVaultPath(relativePath: string): string {
+export function resolveWithinRoot(root: string, relativePath: string): string {
   const cleaned = relativePath.replace(/\\/g, '/').replace(/^\/+/, '')
-  const resolved = path.resolve(VAULT_ROOT, cleaned)
-  const vaultWithSep = VAULT_ROOT.endsWith(path.sep) ? VAULT_ROOT : VAULT_ROOT + path.sep
-  if (resolved !== VAULT_ROOT && !resolved.startsWith(vaultWithSep)) {
-    throw new Error(`Path escapes vault root: "${relativePath}"`)
+  const resolved = path.resolve(root, cleaned)
+  const rootWithSep = root.endsWith(path.sep) ? root : root + path.sep
+  if (resolved !== root && !resolved.startsWith(rootWithSep)) {
+    throw new Error(`Path escapes root: "${relativePath}"`)
   }
   return resolved
 }
@@ -19,6 +18,12 @@ export function errorResult(message: string) {
   return {
     isError: true as const,
     content: [{ type: 'text' as const, text: message }]
+  }
+}
+
+export function jsonResult(payload: unknown) {
+  return {
+    content: [{ type: 'text' as const, text: JSON.stringify(payload, null, 2) }]
   }
 }
 

@@ -35,7 +35,7 @@ cannot read or write outside it — even if asked to.
 Returns the raw markdown text. Errors:
 
 - `File not found: "<path>" (vault: <root>)`
-- `Path escapes vault root: "<path>"`
+- `Path escapes root: "<path>"`
 
 ### `kb_list_notes`
 
@@ -162,7 +162,7 @@ npm run lint:md        # prettier + markdownlint for *.md
   separators, strips leading slashes, then asserts the resolved absolute path
   is strictly inside the vault root. Inputs that resolve outside the vault
   (via `..`, absolute paths, etc.) are rejected with
-  `Path escapes vault root: "<input>"`.
+  `Path escapes root: "<input>"`.
 - The server has no network access and performs no authentication. Trust is
   delegated entirely to the local OS user running it.
 
@@ -179,7 +179,7 @@ Claude Desktop config `env` block, or as a shell variable for `dev:mcp`.
 the path, and check that `~` was expanded as you expected (the server expands
 a leading `~/` itself).
 
-**Tool returns `Path escapes vault root`**
+**Tool returns `Path escapes root`**
 
 The requested path resolves outside the vault. Use vault-relative paths
 without leading `..` or absolute paths.

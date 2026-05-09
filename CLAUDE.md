@@ -66,7 +66,7 @@ All three tools take vault-relative paths and reject any traversal outside
 - **Path safety**: `resolveVaultPath()` in `src/utils.ts` normalises separators,
   strips leading slashes, then verifies the resolved absolute path is strictly
   inside `VAULT_ROOT` (handles trailing-separator edge case). Throws
-  `Path escapes vault root` on traversal attempts.
+  `Path escapes root` on traversal attempts.
 - **Error shape**: Tool errors return `{ isError: true, content: [{ type: 'text', text }] }`
   via the `errorResult()` helper. `ENOENT` is mapped to friendly messages
   ("File not found", "Directory not found").
@@ -95,7 +95,7 @@ All three tools take vault-relative paths and reject any traversal outside
 
 ## Error Handling
 
-- Path traversal: `Path escapes vault root: "<input>"`
+- Path traversal: `Path escapes root: "<input>"`
 - Missing file (read): `File not found: "<path>" (vault: <root>)`
 - Missing directory (list): `Directory not found: "<path>"`
 - Missing parent on write: `Directory not found for: "<path>" — set create_dirs: true to create it automatically`

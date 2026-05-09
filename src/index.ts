@@ -18,7 +18,8 @@ import { z } from 'zod'
 import { VAULT_ROOT } from './config.ts'
 import * as notes from './notes.ts'
 
-console.error(`mcp-kb starting... at ${VAULT_ROOT}`)
+console.error(`mcp-kb starting...`)
+console.error(`  ROOT_PATH=${VAULT_ROOT}`)
 
 const server = new McpServer({
   name: 'mcp-kb',
@@ -43,7 +44,7 @@ Returns:
 
 Errors:
   - "File not found" when the path does not exist in the vault.
-  - "Path escapes vault root" when the path attempts directory traversal.`,
+  - "Path escapes root" when the path attempts directory traversal.`,
     inputSchema: z
       .object({
         path: z.string().min(1, 'Path must not be empty').describe('Vault-relative path to the note, e.g. "Pillars/Finance/Budget.md"')
@@ -93,7 +94,7 @@ Returns:
   Confirmation message with the vault-relative path and byte count written.
 
 Errors:
-  - "Path escapes vault root" when the path attempts directory traversal.
+  - "Path escapes root" when the path attempts directory traversal.
   - "Directory not found" when create_dirs is false and the parent directory does not exist.`,
     inputSchema: z
       .object({
@@ -117,7 +118,7 @@ async function main(): Promise<void> {
 
   const transport = new StdioServerTransport()
   await server.connect(transport)
-  console.error(`mcp-kb ready — vault: ${VAULT_ROOT}`)
+  console.error(`mcp-kb ready`)
 }
 
 main().catch((err) => {

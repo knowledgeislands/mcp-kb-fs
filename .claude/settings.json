@@ -6,7 +6,8 @@
       "Bash(ROOT_PATH=\"/Users/krisbrown/Library/Application Support/Claude/local-agent-mode-sessions/586e7b57-ec7b-4a43-89fd-6c7db36c277c/e2dcb564-3b11-456f-b518-79142d42da33\" HOUSEKEEPING_PATH=\"/tmp/test-housekeeping\" timeout 3 npx tsx src/index.ts)",
       "Bash(npx @biomejs/biome check --write)",
       "Bash(ROOT_PATH=/tmp/test-vault mkdir -p /tmp/test-vault)",
-      "Bash(ROOT_PATH=/tmp/test-vault timeout 3 npx tsx src/index.ts)"
+      "Bash(ROOT_PATH=/tmp/test-vault timeout 3 npx tsx src/index.ts)",
+      "Bash(npx @biomejs/biome check)"
     ]
   }
 }
