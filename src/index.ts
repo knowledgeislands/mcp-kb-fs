@@ -8,7 +8,7 @@
  * directory traversal.
  *
  * Configuration (environment variables):
- *   KB_ROOT_PATH    Absolute or ~ path to the vault root.
+ *   ROOT_PATH    Absolute or ~ path to the vault root.
  */
 
 import { strict as assert } from 'node:assert'
@@ -28,9 +28,9 @@ function expandHome(p: string): string {
   return p.startsWith('~/') ? path.join(os.homedir(), p.slice(2)) : p
 }
 
-console.error(`mcp-kb starting... at ${process.env.KB_ROOT_PATH}`)
-assert(process.env.KB_ROOT_PATH, 'KB_ROOT_PATH environment variable must be set')
-const VAULT_ROOT = path.resolve(expandHome(process.env.KB_ROOT_PATH))
+console.error(`mcp-kb starting... at ${process.env.ROOT_PATH}`)
+assert(process.env.ROOT_PATH, 'ROOT_PATH environment variable must be set')
+const VAULT_ROOT = path.resolve(expandHome(process.env.ROOT_PATH))
 
 /* ================================================================ */
 /*  Utilities                                                       */
@@ -266,7 +266,7 @@ async function main(): Promise<void> {
   try {
     await fs.access(VAULT_ROOT)
   } catch {
-    console.error(`mcp-kb: vault root not accessible: ${VAULT_ROOT}\nSet KB_ROOT_PATH  to the correct path and restart.`)
+    console.error(`mcp-kb: vault root not accessible: ${VAULT_ROOT}\nSet ROOT_PATH  to the correct path and restart.`)
     return
   }
 

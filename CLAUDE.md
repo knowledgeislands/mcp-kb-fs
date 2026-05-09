@@ -50,7 +50,7 @@ grows, split into a `src/tools/` directory and re-export from `src/index.ts`.
 ### Tools Exposed
 
 All three tools take vault-relative paths and reject any traversal outside
-`KB_ROOT_PATH`.
+`ROOT_PATH`.
 
 - `kb_read_note` - Read full markdown content of a note. Read-only, idempotent.
 - `kb_list_notes` - List `.md` files in a directory, optionally recursive. Read-only.
@@ -60,7 +60,7 @@ All three tools take vault-relative paths and reject any traversal outside
 ### Key Components
 
 - **Vault root**: `VAULT_ROOT` is resolved once at startup from
-  `process.env.KB_ROOT_PATH`. `~` is expanded to the user home dir.
+  `process.env.ROOT_PATH`. `~` is expanded to the user home dir.
 - **Path safety**: `resolveVaultPath()` normalises separators, strips leading
   slashes, then verifies the resolved absolute path is strictly inside
   `VAULT_ROOT` (handles trailing-separator edge case). Throws
@@ -75,7 +75,7 @@ All three tools take vault-relative paths and reject any traversal outside
 
 ### Environment Variables
 
-- `KB_ROOT_PATH` (**required**) - Absolute path or `~/...` to the vault root.
+- `ROOT_PATH` (**required**) - Absolute path or `~/...` to the vault root.
   The server asserts this is set at startup; missing it causes a hard exit.
 
 ### Boot-time Checks
@@ -86,7 +86,7 @@ All three tools take vault-relative paths and reject any traversal outside
 ## Common Setup Issues
 
 1. **Missing dependencies**: Run `npm install` first.
-2. **`KB_ROOT_PATH` not set**: Server aborts at startup. Set it in the Claude
+2. **`ROOT_PATH` not set**: Server aborts at startup. Set it in the Claude
    Desktop config `env` block (see README) or in your shell when running `dev:mcp`.
 3. **Vault path doesn't exist**: Server logs `vault root not accessible` and
    exits cleanly. Verify the path and that `~` was expanded as expected.

@@ -13,7 +13,7 @@ cannot read or write outside it — even if asked to.
 - **Path safety**: resolves and verifies every input path against the vault
   root; rejects `..` traversal and absolute paths that escape the vault.
 - **No network, no auth**: pure local filesystem over MCP stdio.
-- **Single env var to configure**: `KB_ROOT_PATH`.
+- **Single env var to configure**: `ROOT_PATH`.
 
 ## Available Tools
 
@@ -84,7 +84,7 @@ With `create_dirs: false` and a missing parent, returns
 1. **Install dependencies**: `npm install`
 2. **Pick a vault directory** (any folder containing markdown files; can be empty).
 3. **Configure Claude Desktop** with the path to `dist/index.js` and your
-   `KB_ROOT_PATH` (see below).
+   `ROOT_PATH` (see below).
 4. **Build**: `npm run build`
 5. **Restart Claude Desktop** — the three `kb_*` tools should appear.
 
@@ -105,9 +105,9 @@ npm install
 
 ### Environment Variables
 
-| Name           | Required | Description                                                                |
-| -------------- | -------- | -------------------------------------------------------------------------- |
-| `KB_ROOT_PATH` | yes      | Absolute path or `~/...` to the vault root. The server asserts on startup. |
+| Name        | Required | Description                                                                |
+| ----------- | -------- | -------------------------------------------------------------------------- |
+| `ROOT_PATH` | yes      | Absolute path or `~/...` to the vault root. The server asserts on startup. |
 
 ### Claude Desktop Configuration
 
@@ -121,7 +121,7 @@ Desktop config:
       "command": "node",
       "args": ["/path/to/mcp-kb/dist/index.js"],
       "env": {
-        "KB_ROOT_PATH": "/path/to/your/vault"
+        "ROOT_PATH": "/path/to/your/vault"
       }
     }
   }
@@ -135,7 +135,7 @@ A starter version is in [`claude-config-sample.json`](./claude-config-sample.jso
 For fast iteration without rebuilding:
 
 ```bash
-KB_ROOT_PATH=~/notes npm run dev:mcp
+ROOT_PATH=~/notes npm run dev:mcp
 ```
 
 This runs `src/index.ts` under `tsx watch`. Point Claude Desktop at this command
@@ -156,7 +156,7 @@ npm run lint:md        # prettier + markdownlint for *.md
 
 ## Security Model
 
-- The vault root is resolved once at startup from `KB_ROOT_PATH`. `~` is
+- The vault root is resolved once at startup from `ROOT_PATH`. `~` is
   expanded to the user home directory.
 - Every tool input goes through `resolveVaultPath()`, which normalises
   separators, strips leading slashes, then asserts the resolved absolute path
@@ -168,14 +168,14 @@ npm run lint:md        # prettier + markdownlint for *.md
 
 ## Troubleshooting
 
-**`KB_ROOT_PATH environment variable must be set`**
+**`ROOT_PATH environment variable must be set`**
 
-The server aborts at startup if `KB_ROOT_PATH` is missing. Set it in the
+The server aborts at startup if `ROOT_PATH` is missing. Set it in the
 Claude Desktop config `env` block, or as a shell variable for `dev:mcp`.
 
 **`vault root not accessible: <path>`**
 
-`KB_ROOT_PATH` was set but the path doesn't exist or isn't readable. Verify
+`ROOT_PATH` was set but the path doesn't exist or isn't readable. Verify
 the path, and check that `~` was expanded as you expected (the server expands
 a leading `~/` itself).
 

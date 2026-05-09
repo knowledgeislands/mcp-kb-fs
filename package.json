@@ -13,6 +13,7 @@
     "markdownlint-cli2": "^0.22.1",
     "prettier": "^3.8.3",
     "syncpack": "^14.3.1",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
   },
@@ -26,7 +27,7 @@
     "clean": "rm -rf {dist,node_modules}",
     "dev:mcp": "tsx watch src/index.ts",
     "format": "npx biome format --write",
-    "inspect": "npx @modelcontextprotocol/inspector tsx src/mcp-server/index.ts",
+    "inspect": "npx @modelcontextprotocol/inspector tsx src/index.ts",
     "lint:check": "npx biome check",
     "lint:deps:missing": "npx depcheck --json | npx node-jq --sort-keys '.' | npx node-jq '.missing | keys | .[]' | xargs npm add -D",
     "lint:deps:unused": "npx depcheck --json | npx node-jq --sort-keys '.' | npx node-jq '.devDependencies[]' | xargs npm uninstall",
