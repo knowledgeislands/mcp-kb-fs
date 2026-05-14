@@ -11,7 +11,7 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     fileParallelism: false,
     env: {
-      ROOT_PATH: TEST_ROOT
+      MCP_KB_ROOT_PATH: TEST_ROOT
     },
     coverage: {
       provider: 'v8',
@@ -22,7 +22,11 @@ export default defineConfig({
         // Server entry points and tool registration aggregators are pure
         // wiring (every line is `server.registerTool(...)`); their behaviour
         // is exercised by `npm run inspect` and the smoke test in CI.
-        'src/mcp-server/index.ts'
+        'src/mcp-server/index.ts',
+        'src/tools/**/index.ts',
+        // Pure data: annotation presets are referenced only from tool
+        // registration sites (which are themselves excluded).
+        'src/shared/annotations.ts'
       ],
       thresholds: {
         lines: 100,

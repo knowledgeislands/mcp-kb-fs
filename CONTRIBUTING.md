@@ -32,7 +32,7 @@ npm run lint:md           # prettier + markdownlint for *.md
 
 - **TypeScript ES modules** — `"type": "module"`, internal imports use `.js` extensions (e.g. `from './notes.js'`) so `tsc` emits valid JS.
 - **Arrow functions** for top-level declarations (`export const foo = () => …`).
-- **Strict path safety**: any tool input that touches the filesystem must go through `resolveWithinRoot(ROOT_PATH, …)` from `src/utils.ts`. Inputs that resolve outside the root throw `Path escapes root`.
+- **Strict path safety**: any tool input that touches the filesystem must go through `resolveWithinRoot(MCP_KB_ROOT_PATH, …)` from `src/utils.ts`. Inputs that resolve outside the root throw `Path escapes root`.
 - **Errors**: tools return MCP errors via `errorResult(...)`; structured results via `jsonResult(...)`.
 - **Annotations**: be honest with `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` on every tool registration.
 
@@ -58,7 +58,7 @@ Add `!` for breaking changes (`feat!:` / `fix!:`) — bumps major.
 ### Testing
 
 - New code should ship with tests. Vitest is configured with V8 coverage and has thresholds in `vitest.config.ts` — if your change drops coverage below the threshold, CI fails.
-- File-level isolation: tests share `ROOT_PATH` (set to a tmpdir in `vitest.config.ts`), so tests should clean up after themselves with `beforeEach`/`afterEach`.
+- File-level isolation: tests share `MCP_KB_ROOT_PATH` (set to a tmpdir in `vitest.config.ts`), so tests should clean up after themselves with `beforeEach`/`afterEach`.
 
 ## Before opening a PR
 

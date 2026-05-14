@@ -81,7 +81,7 @@ Same input shape as `kb_list_notes`. Returns a newline-separated list of KB-rela
 1. **Install dependencies**: `npm install`
 2. **Pick a knowledge base directory** — any folder of markdown files (can be empty).
 3. **Build**: `npm run build`
-4. **Configure Claude Desktop** with the path to `dist/mcp-server/index.js` and your `ROOT_PATH` (see [Configuration](#configuration)).
+4. **Configure Claude Desktop** with the path to `dist/mcp-server/index.js` and your `MCP_KB_ROOT_PATH` (see [Configuration](#configuration)).
 5. **Restart Claude Desktop** — the four `kb_*` tools should appear.
 
 ## Example Conversations
@@ -131,7 +131,7 @@ npm install
 
 | Name | Required | Description |
 | --- | --- | --- |
-| `ROOT_PATH` | yes | Absolute path or `~/...` to the knowledge base root. The server asserts on startup. |
+| `MCP_KB_ROOT_PATH` | yes | Absolute path or `~/...` to the knowledge base root. The server asserts on startup. |
 | `NODE_ENV` | no | Dev convention. `dev:mcp`/`inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
 
 ### Claude Desktop Configuration
@@ -145,7 +145,7 @@ Run `npm run build` first so `dist/mcp-server/index.js` exists, then add to your
       "command": "node",
       "args": ["/path/to/mcp-kb/dist/mcp-server/index.js"],
       "env": {
-        "ROOT_PATH": "/path/to/your/kb"
+        "MCP_KB_ROOT_PATH": "/path/to/your/kb"
       }
     }
   }
@@ -159,12 +159,12 @@ A starter is in [`claude-config-sample.json`](./claude-config-sample.json).
 For fast iteration without rebuilding:
 
 ```bash
-ROOT_PATH=~/notes npm run dev:mcp
+MCP_KB_ROOT_PATH=~/notes npm run dev:mcp
 ```
 
 This runs `src/mcp-server/index.ts` under `tsx watch`. Point Claude Desktop at this command during development if you want live reload.
 
-Alternatively, copy [`.env.example`](./.env.example) to `.env.development` and set `ROOT_PATH` there. The `dev:mcp` and `inspect` scripts run with `NODE_ENV=development`, and [`src/config.ts`](./src/config.ts) calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup — so it picks up `.env.development` from the CWD automatically. Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; env vars must come from the Desktop config `env` block there.
+Alternatively, copy [`.env.example`](./.env.example) to `.env.development` and set `MCP_KB_ROOT_PATH` there. The `dev:mcp` and `inspect` scripts run with `NODE_ENV=development`, and [`src/config.ts`](./src/config.ts) calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup — so it picks up `.env.development` from the CWD automatically. Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; env vars must come from the Desktop config `env` block there.
 
 ## Development
 
@@ -181,7 +181,7 @@ npm run lint:md        # prettier + markdownlint for *.md
 
 ## Security Model
 
-- The root is resolved once at startup from `ROOT_PATH`. `~` is expanded to the user home directory.
+- The root is resolved once at startup from `MCP_KB_ROOT_PATH`. `~` is expanded to the user home directory.
 - Every tool input goes through two checks before any FS access:
   1. **Lexical** — `resolveWithinRoot()` normalises separators, strips leading slashes, then asserts the resolved absolute path is strictly inside the root. Inputs that resolve outside via `..` or absolute-style paths are rejected with `Path escapes root: "<input>"`.
   2. **Physical** — `assertRealPathWithinRoot()` calls `fs.realpath` on both the root and the target (or its deepest existing ancestor for new-file writes) and verifies the realpath of the target lives inside the realpath of the root. This rejects symlink-based escapes that the lexical check cannot see.
@@ -198,10 +198,10 @@ npm run lint:md        # prettier + markdownlint for *.md
 ├── package.json
 ├── tsconfig.json               # Base TS config
 ├── tsconfig.build.json         # Build config (emits to dist/)
-├── .env.example                # Template for ROOT_PATH (copy to .env.development)
+├── .env.example                # Template for MCP_KB_ROOT_PATH (copy to .env.development)
 ├── src/
 │   ├── mcp-server/index.ts     # MCP server entry — boots and registers tools
-│   ├── config.ts               # ROOT_PATH env var loading
+│   ├── config.ts               # MCP_KB_ROOT_PATH env var loading
 │   ├── utils.ts                # Path safety + result helpers
 │   ├── protected.ts            # Protected-path predicate
 │   └── notes.ts                # Tool handlers (read/list/write)
@@ -211,17 +211,17 @@ npm run lint:md        # prettier + markdownlint for *.md
 
 ## Troubleshooting
 
-**`ROOT_PATH environment variable must be set`**
+**`MCP_KB_ROOT_PATH environment variable must be set`**
 
-The server aborts at startup if `ROOT_PATH` is missing. Set it in the Claude Desktop config `env` block, or as a shell variable for `dev:mcp`.
+The server aborts at startup if `MCP_KB_ROOT_PATH` is missing. Set it in the Claude Desktop config `env` block, or as a shell variable for `dev:mcp`.
 
-**`ROOT_PATH not accessible: <path>`**
+**`MCP_KB_ROOT_PATH not accessible: <path>`**
 
-`ROOT_PATH` was set but the path doesn't exist or isn't readable. Verify the path, and check that `~` was expanded as you expected (the server expands a leading `~/` itself).
+`MCP_KB_ROOT_PATH` was set but the path doesn't exist or isn't readable. Verify the path, and check that `~` was expanded as you expected (the server expands a leading `~/` itself).
 
 **Tool returns `Path escapes root`**
 
-The requested path resolves outside the root, either lexically (`..`/absolute) or via a symlink whose target sits outside `ROOT_PATH`. Use KB-relative paths and check any symlinks inside the KB.
+The requested path resolves outside the root, either lexically (`..`/absolute) or via a symlink whose target sits outside `MCP_KB_ROOT_PATH`. Use KB-relative paths and check any symlinks inside the KB.
 
 **Tool returns `Path is protected`**
 
@@ -243,7 +243,7 @@ Add a new tool by registering it in [`src/mcp-server/index.ts`](./src/mcp-server
 
 1. Validate inputs with a strict zod schema (`.strict()` to reject extras).
 2. Set MCP annotations honestly (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`).
-3. Run any path inputs through `resolveWithinRoot(ROOT_PATH, ...)` (and `assertRealPathWithinRoot` for FS-touching tools) before touching the filesystem.
+3. Run any path inputs through `resolveWithinRoot(MCP_KB_ROOT_PATH, ...)` (and `assertRealPathWithinRoot` for FS-touching tools) before touching the filesystem.
 4. Return errors via `errorResult(...)` so the client sees `isError: true`.
 
 If [`src/notes.ts`](./src/notes.ts) grows beyond a comfortable size, split handlers into additional modules under `src/` and re-import them from `src/mcp-server/index.ts`.

@@ -16,11 +16,11 @@ You should expect an acknowledgement within 72 hours. We aim to triage, investig
 
 ## Scope
 
-`mcp-kb` is a stdio MCP server that exposes read/write access to a local directory of markdown files. It runs locally with the privileges of the user who launched it, and the security boundary is the configured `ROOT_PATH`.
+`mcp-kb` is a stdio MCP server that exposes read/write access to a local directory of markdown files. It runs locally with the privileges of the user who launched it, and the security boundary is the configured `MCP_KB_ROOT_PATH`.
 
 In scope:
 
-- Path containment in `src/utils.ts` (`resolveWithinRoot`) — any input that resolves outside `ROOT_PATH` (traversal, symlink escape, encoded separators, edge cases around trailing slashes).
+- Path containment in `src/utils.ts` (`resolveWithinRoot`) — any input that resolves outside `MCP_KB_ROOT_PATH` (traversal, symlink escape, encoded separators, edge cases around trailing slashes).
 - Tool handlers in `src/notes.ts` — `kb_read_note`, `kb_list_notes`, and the destructive `kb_write_note` (including `create_dirs` behaviour).
 - Boot-time root validation in `src/config.ts`.
 
@@ -28,8 +28,8 @@ Out of scope:
 
 - Issues only reproducible against a forked or modified version.
 - Vulnerabilities in upstream dependencies (please report those upstream; open an issue here only if `mcp-kb` exposes the flaw in a way that the upstream project does not).
-- Issues that require local OS-level access already higher-privileged than the user running the MCP server (e.g. an attacker who can already write files inside `ROOT_PATH` or replace the binary).
-- Misconfiguration of `ROOT_PATH` to a directory the user did not intend to expose.
+- Issues that require local OS-level access already higher-privileged than the user running the MCP server (e.g. an attacker who can already write files inside `MCP_KB_ROOT_PATH` or replace the binary).
+- Misconfiguration of `MCP_KB_ROOT_PATH` to a directory the user did not intend to expose.
 
 ## Supported Versions
 

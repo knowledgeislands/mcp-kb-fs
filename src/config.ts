@@ -12,6 +12,6 @@ try {
   // no .env present — that's fine
 }
 
-assert(process.env.ROOT_PATH, 'ROOT_PATH environment variable must be set')
+assert(process.env.MCP_KB_ROOT_PATH, 'MCP_KB_ROOT_PATH environment variable must be set')
 
-export const ROOT_PATH: string = path.resolve(expandHome(process.env.ROOT_PATH))
+export const ROOT_PATH: string = path.resolve(expandHome(process.env.MCP_KB_ROOT_PATH))

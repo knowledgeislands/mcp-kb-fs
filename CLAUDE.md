@@ -37,14 +37,15 @@ Scripts:
 The codebase is TypeScript with ES modules (`"type": "module"` in `package.json`). Source lives under `src/`; compiled JS is emitted to `dist/` by `npm run build` (via `tsconfig.build.json`).
 
 - `src/mcp-server/index.ts` - Entry point. Boots the MCP server and registers each tool; delegates implementation to `notes.ts`.
-- `src/config.ts` - Loads and validates the `ROOT_PATH` env var; exports the resolved `ROOT_PATH` constant.
+- `src/config.ts` - Loads and validates the `MCP_KB_ROOT_PATH` env var; exports the resolved `ROOT_PATH` constant.
+- `src/shared/annotations.ts` - MCP tool annotation presets (`READ_ONLY`, `DESTRUCTIVE`).
 - `src/utils.ts` - Lexical guard `resolveWithinRoot`, async realpath guard `assertRealPathWithinRoot`, plus `errorResult`/`jsonResult` helpers and the `isNodeError` type guard.
 - `src/protected.ts` - `isProtectedPath` predicate: hides dotfiles/dotdirs at any depth and root-level repo-meta basenames.
 - `src/notes.ts` - Tool handlers: `readNote`, `listNotes`, `listFolders`, `writeNote`.
 
 ### Tools Exposed
 
-All tools take KB-relative paths and reject any traversal outside `ROOT_PATH`.
+All tools take KB-relative paths and reject any traversal outside `MCP_KB_ROOT_PATH`.
 
 - `kb_read_note` - Read full markdown content of a note. Read-only, idempotent.
 - `kb_list_notes` - List `.md` files in a directory, optionally recursive. Read-only.
@@ -53,7 +54,7 @@ All tools take KB-relative paths and reject any traversal outside `ROOT_PATH`.
 
 ### Key Components
 
-- **Root**: `ROOT_PATH` is resolved once at startup in `config.ts` from `process.env.ROOT_PATH`. `~` is expanded to the user home dir.
+- **Root**: `ROOT_PATH` (TS const) is resolved once at startup in `config.ts` from `process.env.MCP_KB_ROOT_PATH`. `~` is expanded to the user home dir.
 - **Path safety (two layers)**:
   1. `resolveWithinRoot()` in `src/utils.ts` normalises separators, strips leading slashes, then verifies the resolved absolute path is strictly inside the root (handles trailing-separator edge case). Throws `Path escapes root` on traversal attempts.
   2. `assertRealPathWithinRoot()` (also in `src/utils.ts`) calls `fs.realpath` on both the root and the target — or, for new-file writes, the deepest existing ancestor — and rejects symlink-based escapes that the lexical check cannot see. Handlers call this after `resolveWithinRoot` and before any FS access.
@@ -69,17 +70,30 @@ All tools take KB-relative paths and reject any traversal outside `ROOT_PATH`.
 
 ### Environment Variables
 
-- `ROOT_PATH` (**required**) - Absolute path or `~/...` to the knowledge base root. The server asserts this is set at startup; missing it causes a hard exit.
+- `MCP_KB_ROOT_PATH` (**required**) - Absolute path or `~/...` to the knowledge base root. The server asserts this is set at startup; missing it causes a hard exit.
 
 ### Boot-time Checks
 
-- The server verifies `ROOT_PATH` is accessible (`fs.access`) before connecting the transport. If not accessible, it logs a hint and returns without crashing.
+- The server verifies `MCP_KB_ROOT_PATH` is accessible (`fs.access`) before connecting the transport. If not accessible, it logs a hint and returns without crashing.
+
+## Security Requirements
+
+Invariants every tool that touches the filesystem must uphold. New tools and changes to existing tools must preserve all of these.
+
+1. **Two-layer path containment, every call site.** Before any `fs.*` call, run user input through **both** `resolveWithinRoot()` (lexical) and `assertRealPathWithinRoot()` (realpath). The lexical guard catches `..`, absolute-style inputs, and Windows separators; the realpath guard catches symlink escapes that the lexical check cannot see. Both live in [src/utils.ts](./src/utils.ts).
+2. **Protected paths are non-negotiable.** Every read/write/list handler calls `isProtectedPath()` on the resolved path. Dotfiles/dotdirs at any depth and root-level repo-meta names (README, CLAUDE, LICENSE, etc.) must remain unreachable. New tools that touch the FS must call this filter — see existing handlers in [src/notes.ts](./src/notes.ts) for the pattern.
+3. **File-type discipline.** Note tools only accept `.md` paths and reject non-files. New tools that walk the tree must filter by intended type, not return arbitrary files.
+4. **Zod schemas are `.strict()`.** All tool input schemas reject unknown fields. Numeric inputs are bounded.
+5. **No shell-string interpolation.** This server does not shell out today. If a future tool needs to, use `execFile` with an argv array — never `exec` or string concatenation.
+6. **Error messages must not leak the absolute root.** Error text uses relative paths (`path.relative(MCP_KB_ROOT_PATH, ...)`) when surfacing what the caller asked for.
+
+Tests covering these invariants live in [src/notes.test.ts](./src/notes.test.ts): `rejects path traversal` (per tool), `rejects deeply nested traversal that escapes root`, `rejects symlink escape via realpath check`, `rejects writeNote into a symlinked-out directory`. Any new tool that touches the FS gets parallel coverage.
 
 ## Common Setup Issues
 
 1. **Missing dependencies**: Run `npm install` first.
-2. **`ROOT_PATH` not set**: Server aborts at startup. Set it in the Claude Desktop config `env` block (see README) or in your shell when running `dev:mcp`.
-3. **Root path doesn't exist**: Server logs `ROOT_PATH not accessible` and exits cleanly. Verify the path and that `~` was expanded as expected.
+2. **`MCP_KB_ROOT_PATH` not set**: Server aborts at startup. Set it in the Claude Desktop config `env` block (see README) or in your shell when running `dev:mcp`.
+3. **Root path doesn't exist**: Server logs `MCP_KB_ROOT_PATH not accessible` and exits cleanly. Verify the path and that `~` was expanded as expected.
 
 ## Error Handling
 
