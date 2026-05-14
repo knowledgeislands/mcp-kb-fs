@@ -38,7 +38,7 @@ The codebase is TypeScript with ES modules (`"type": "module"` in `package.json`
 
 - `src/mcp-server/index.ts` - Entry point. Boots the MCP server and registers each tool; delegates implementation to `notes.ts`.
 - `src/config.ts` - Loads and validates the `MCP_KB_ROOT_PATH` env var; exports the resolved `ROOT_PATH` constant.
-- `src/shared/annotations.ts` - MCP tool annotation presets (`READ_ONLY`, `DESTRUCTIVE`).
+- `src/utils/annotations.ts` - MCP tool annotation presets (`READ_ONLY`, `DESTRUCTIVE`).
 - `src/utils.ts` - Lexical guard `resolveWithinRoot`, async realpath guard `assertRealPathWithinRoot`, plus `errorResult`/`jsonResult` helpers and the `isNodeError` type guard.
 - `src/protected.ts` - `isProtectedPath` predicate: hides dotfiles/dotdirs at any depth and root-level repo-meta basenames.
 - `src/notes.ts` - Tool handlers: `readNote`, `listNotes`, `listFolders`, `writeNote`.
@@ -71,8 +71,10 @@ All tools take KB-relative paths and reject any traversal outside `MCP_KB_ROOT_P
 ### Environment Variables
 
 - `MCP_KB_ROOT_PATH` (**required**) - Absolute path or `~/...` to the knowledge base root. The server asserts this is set at startup; missing it causes a hard exit.
-- `MCP_KB_AUDIT_LOG` (optional, default `writes`) - scope of the JSONL audit log. `off` disables logging entirely; `writes` records only destructive tools (those with `destructiveHint: true`); `all` records every tool. Each event has `{ts, server, tool, role, ok, duration_ms, error?, args}` (the `content` arg of `kb_write_note` is redacted). Write failures go to stderr only and never block the tool call. Unknown values abort startup. See [src/shared/audit-log.ts](./src/shared/audit-log.ts).
+- `MCP_KB_AUDIT_LOG` (optional, default `writes`) - scope of the JSONL audit log. `off` disables logging entirely; `writes` records only destructive tools (those with `destructiveHint: true`); `all` records every tool. Each event has `{ts, server, tool, role, ok, duration_ms, error?, args}` (the `content` arg of `kb_write_note` is redacted). Write failures go to stderr only and never block the tool call. Unknown values abort startup. See [src/utils/audit-log.ts](./src/utils/audit-log.ts).
 - `MCP_KB_AUDIT_LOG_PATH` (optional) - audit log path. Defaults to `~/.local/state/mcp-kb/audit.jsonl`. Created with mode `0o600` and chmodded down once per process if it already exists with looser permissions.
+- `MCP_KB_AUDIT_LOG_MAX_BYTES` (optional, default `10485760` = 10 MiB) - size threshold for rotation. When the live `audit.jsonl` exceeds this after an append, it's renamed to `audit.jsonl.1` and older rotations shift up. `0` disables rotation.
+- `MCP_KB_AUDIT_LOG_KEEP` (optional, default `5`) - number of rotated files to retain. The oldest beyond this count is dropped. `0` truncates without preserving history.
 
 ### Boot-time Checks
 

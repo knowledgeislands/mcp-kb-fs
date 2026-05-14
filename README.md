@@ -16,12 +16,12 @@ An MCP (Model Context Protocol) server that gives Claude read and write access t
 
 ## Available Tools
 
-| Tool | Description |
-| --- | --- |
-| `kb_read_note` | Read the full markdown content of a note by KB-relative path. |
-| `kb_list_notes` | List `.md` files in a knowledge base directory; optional recursive descent. |
-| `kb_list_folders` | List subfolders in a knowledge base directory; optional recursive descent. |
-| `kb_write_note` | Write or overwrite a note. Optionally creates parent dirs (`create_dirs`). |
+| Tool              | Description                                                                 |
+| ----------------- | --------------------------------------------------------------------------- |
+| `kb_read_note`    | Read the full markdown content of a note by KB-relative path.               |
+| `kb_list_notes`   | List `.md` files in a knowledge base directory; optional recursive descent. |
+| `kb_list_folders` | List subfolders in a knowledge base directory; optional recursive descent.  |
+| `kb_write_note`   | Write or overwrite a note. Optionally creates parent dirs (`create_dirs`).  |
 
 ### `kb_read_note`
 

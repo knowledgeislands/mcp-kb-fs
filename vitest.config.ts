@@ -26,7 +26,7 @@ export default defineConfig({
         'src/tools/**/index.ts',
         // Pure data: annotation presets are referenced only from tool
         // registration sites (which are themselves excluded).
-        'src/shared/annotations.ts'
+        'src/utils/annotations.ts'
       ],
       thresholds: {
         lines: 100,

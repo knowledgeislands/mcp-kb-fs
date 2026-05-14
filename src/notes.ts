@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { ROOT_PATH } from './config.js'
 import { isProtectedPath } from './protected.js'
-import { assertRealPathWithinRoot, errMessage, errorResult, isNodeError, resolveWithinRoot } from './shared/utils.js'
+import { assertRealPathWithinRoot, errMessage, errorResult, isNodeError, resolveWithinRoot } from './utils/utils.js'
 
 const NOTE_EXT = '.md'
 

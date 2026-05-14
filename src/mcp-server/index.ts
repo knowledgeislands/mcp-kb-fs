@@ -15,8 +15,8 @@ import * as fs from 'node:fs/promises'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { AUDIT_LOG_MODE, AUDIT_LOG_PATH, ROOT_PATH } from '../config.js'
-import { makeAuditedRegister } from '../shared/audit-log.js'
 import { registerNotesTools } from '../tools/index.js'
+import { makeAuditedRegister } from '../utils/audit-log.js'
 
 console.error(`mcp-kb starting...`)
 console.error(`  MCP_KB_ROOT_PATH=${ROOT_PATH}`)

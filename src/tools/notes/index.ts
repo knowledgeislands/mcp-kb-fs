@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import * as notes from '../../notes.js'
-import { DESTRUCTIVE, READ_ONLY } from '../../shared/annotations.js'
+import { DESTRUCTIVE, READ_ONLY } from '../../utils/annotations.js'
 
 export const registerNotesTools = (server: McpServer): void => {
   server.registerTool(
