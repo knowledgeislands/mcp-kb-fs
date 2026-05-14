@@ -71,8 +71,8 @@ All tools take KB-relative paths and reject any traversal outside `MCP_KB_ROOT_P
 ### Environment Variables
 
 - `MCP_KB_ROOT_PATH` (**required**) - Absolute path or `~/...` to the knowledge base root. The server asserts this is set at startup; missing it causes a hard exit.
-- `MCP_KB_AUDIT_LOG_PATH` (optional) - JSONL audit log path. Defaults to `~/.local/state/mcp-kb/audit.jsonl`. Every destructive tool invocation (those with `destructiveHint: true`) appends one event with `{ts, server, tool, role, ok, duration_ms, error?, args}` (the `content` arg of `kb_write_note` is redacted). Write failures go to stderr only and never block the tool call. See [src/shared/audit-log.ts](./src/shared/audit-log.ts).
-- `MCP_KB_AUDIT_LOG_ALL` (optional, `1` to enable) - Also log read-only tools (`kb_read_note`, `kb_list_notes`, `kb_list_folders`).
+- `MCP_KB_AUDIT_LOG` (optional, default `writes`) - scope of the JSONL audit log. `off` disables logging entirely; `writes` records only destructive tools (those with `destructiveHint: true`); `all` records every tool. Each event has `{ts, server, tool, role, ok, duration_ms, error?, args}` (the `content` arg of `kb_write_note` is redacted). Write failures go to stderr only and never block the tool call. Unknown values abort startup. See [src/shared/audit-log.ts](./src/shared/audit-log.ts).
+- `MCP_KB_AUDIT_LOG_PATH` (optional) - audit log path. Defaults to `~/.local/state/mcp-kb/audit.jsonl`. Created with mode `0o600` and chmodded down once per process if it already exists with looser permissions.
 
 ### Boot-time Checks
 

@@ -17,4 +17,19 @@ assert(process.env.MCP_KB_ROOT_PATH, 'MCP_KB_ROOT_PATH environment variable must
 export const ROOT_PATH: string = path.resolve(expandHome(process.env.MCP_KB_ROOT_PATH))
 
 export const AUDIT_LOG_PATH: string = path.resolve(expandHome(process.env.MCP_KB_AUDIT_LOG_PATH ?? path.join(os.homedir(), '.local', 'state', 'mcp-kb', 'audit.jsonl')))
-export const AUDIT_LOG_ALL: boolean = process.env.MCP_KB_AUDIT_LOG_ALL === '1'
+
+/**
+ * Scope of tool invocations to record. Default `writes` logs destructive tools
+ * only; `all` adds read-only ones; `off` disables logging entirely (the
+ * wrapper short-circuits and never opens the file).
+ */
+export type AuditLogMode = 'off' | 'writes' | 'all'
+
+const parseAuditLogMode = (raw: string | undefined): AuditLogMode => {
+  const v = raw?.trim().toLowerCase()
+  if (v === undefined || v === '') return 'writes'
+  if (v === 'off' || v === 'writes' || v === 'all') return v
+  throw new Error(`Invalid MCP_KB_AUDIT_LOG="${raw}" — expected one of: off, writes, all.`)
+}
+
+export const AUDIT_LOG_MODE: AuditLogMode = parseAuditLogMode(process.env.MCP_KB_AUDIT_LOG)
