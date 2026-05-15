@@ -78,9 +78,9 @@ Same input shape as `kb_list_notes`. Returns a newline-separated list of KB-rela
 
 ## Quick Start
 
-1. **Install dependencies**: `npm install`
+1. **Install dependencies**: `bun install`
 2. **Pick a knowledge base directory** — any folder of markdown files (can be empty).
-3. **Build**: `npm run build`
+3. **Build**: `bun run build`
 4. **Configure Claude Desktop** with the path to `dist/mcp-server/index.js` and your `MCP_KB_ROOT_PATH` (see [Configuration](#configuration)).
 5. **Restart Claude Desktop** — the four `kb_*` tools should appear.
 
@@ -116,13 +116,13 @@ Claude calls [`kb_list_folders`](#kb_list_folders) with `path: ""` (the root) an
 
 ### Prerequisites
 
-- Node.js 22.0.0 or higher (see `.node-version`)
-- npm
+- [Bun](https://bun.sh) 1.3+ for the dev loop
+- Node.js 22.0.0 or higher to run the compiled `dist/` (see `.node-version`)
 
 ### Install Dependencies
 
 ```bash
-npm install
+bun install
 ```
 
 ## Configuration
@@ -132,11 +132,11 @@ npm install
 | Name | Required | Description |
 | --- | --- | --- |
 | `MCP_KB_ROOT_PATH` | yes | Absolute path or `~/...` to the knowledge base root. The server asserts on startup. |
-| `NODE_ENV` | no | Dev convention. `dev:mcp`/`inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
+| `NODE_ENV` | no | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
 
 ### Claude Desktop Configuration
 
-Run `npm run build` first so `dist/mcp-server/index.js` exists, then add to your Claude Desktop config:
+Run `bun run build` first so `dist/mcp-server/index.js` exists, then add to your Claude Desktop config:
 
 ```json
 {
@@ -159,24 +159,24 @@ A starter is in [`claude-config-sample.json`](./claude-config-sample.json).
 For fast iteration without rebuilding:
 
 ```bash
-MCP_KB_ROOT_PATH=~/notes npm run dev:mcp
+MCP_KB_ROOT_PATH=~/notes bun run server:mcp:dev
 ```
 
-This runs `src/mcp-server/index.ts` under `tsx watch`. Point Claude Desktop at this command during development if you want live reload.
+This runs `src/mcp-server/index.ts` under `bun --watch`. Point Claude Desktop at this command during development if you want live reload.
 
-Alternatively, copy [`.env.example`](./.env.example) to `.env.development` and set `MCP_KB_ROOT_PATH` there. The `dev:mcp` and `inspect` scripts run with `NODE_ENV=development`, and [`src/config.ts`](./src/config.ts) calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup — so it picks up `.env.development` from the CWD automatically. Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; env vars must come from the Desktop config `env` block there.
+Alternatively, copy [`.env.example`](./.env.example) to `.env.development` and set `MCP_KB_ROOT_PATH` there. The `server:mcp:dev` and `server:mcp:inspect` scripts run with `NODE_ENV=development`, and [`src/config.ts`](./src/config.ts) calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup — so it picks up `.env.development` from the CWD automatically. Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; env vars must come from the Desktop config `env` block there.
 
 ## Development
 
 ```bash
-npm run dev:mcp        # tsx watch mode (NODE_ENV=development)
-npm run start:mcp      # build then run from dist/
-npm run inspect        # MCP Inspector against TS source (NODE_ENV=development)
-npm test               # vitest
-npm run typecheck      # tsc --noEmit
-npm run lint:check     # Biome lint + format check
-npm run lint:fix       # Biome auto-fix (uses --unsafe)
-npm run lint:md        # prettier + markdownlint for *.md
+bun run server:mcp:dev      # bun --watch mode (NODE_ENV=development)
+bun run server:mcp:start    # build then run from dist/ under node
+bun run server:mcp:inspect  # MCP Inspector against TS source (NODE_ENV=development)
+bun run test                # vitest (use `bun run test`, not `bun test`)
+bun run lint:types          # tsc --noEmit
+bun run lint:check          # Biome lint + format check
+bun run lint:fix            # Biome auto-fix (uses --unsafe)
+bun run lint:md             # prettier + markdownlint for *.md
 ```
 
 ## Security Model
@@ -205,7 +205,7 @@ npm run lint:md        # prettier + markdownlint for *.md
 │   ├── utils.ts                # Path safety + result helpers
 │   ├── protected.ts            # Protected-path predicate
 │   └── notes.ts                # Tool handlers (read/list/write)
-└── dist/                       # Build output (gitignored, created by `npm run build`)
+└── dist/                       # Build output (gitignored, created by `bun run build`)
     └── mcp-server/index.js     # Compiled entry point used by Claude Desktop
 ```
 
@@ -213,7 +213,7 @@ npm run lint:md        # prettier + markdownlint for *.md
 
 **`MCP_KB_ROOT_PATH environment variable must be set`**
 
-The server aborts at startup if `MCP_KB_ROOT_PATH` is missing. Set it in the Claude Desktop config `env` block, or as a shell variable for `dev:mcp`.
+The server aborts at startup if `MCP_KB_ROOT_PATH` is missing. Set it in the Claude Desktop config `env` block, or as a shell variable for `bun run server:mcp:dev`.
 
 **`MCP_KB_ROOT_PATH not accessible: <path>`**
 
@@ -234,7 +234,7 @@ The path matches a protected pattern (a dotfile/dotdir at any depth, or a root-l
 **Cannot find module after pulling changes**
 
 ```bash
-npm install
+bun install
 ```
 
 ## Extending the Server
