@@ -32,8 +32,9 @@ const splitSegments = (relPath: string): string[] => {
  */
 export const isProtectedPath = (relPath: string): boolean => {
   const segments = splitSegments(relPath)
-  if (segments.length === 0) return false
+  const [first] = segments
+  if (first === undefined) return false
   if (segments.some((s) => s.startsWith('.'))) return true
-  if (segments.length === 1 && isMetaBasename(segments[0])) return true
+  if (segments.length === 1 && isMetaBasename(first)) return true
   return false
 }
