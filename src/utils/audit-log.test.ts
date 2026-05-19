@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { DESTRUCTIVE, READ_ONLY } from './annotations.js'
 
 describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
   const tmpDir = path.join(os.tmpdir(), 'mcp-kb-fs-audit-log-tests', `run-${process.pid}-${Date.now()}`)
@@ -20,14 +21,14 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
     delete process.env.MCP_KB_FS_AUDIT_LOG
   })
 
-  it('appends an event line for an editor tool', async () => {
+  it('appends an event line for a write-role tool', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('editor_kb_write_note', 'editor', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog('kb_note_write', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
     await wrapped({ path: 'memo.md' })
     await new Promise((r) => setTimeout(r, 20))
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
-    expect(event.tool).toBe('editor_kb_write_note')
-    expect(event.role).toBe('editor')
+    expect(event.tool).toBe('kb_note_write')
+    expect(event.role).toBe('write')
     expect(event.ok).toBe(true)
     expect(event.server).toBe('mcp-kb-fs')
     expect(event.args).toEqual({ path: 'memo.md' })
@@ -35,7 +36,7 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
 
   it('redacts the content field on writeNote-style args', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('editor_kb_write_note', 'editor', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog('kb_note_write', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
     await wrapped({ path: 'memo.md', content: 'x'.repeat(5000) })
     await new Promise((r) => setTimeout(r, 20))
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
@@ -44,7 +45,7 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
 
   it('records ok:false when the result has isError:true', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('editor_kb_write_note', 'editor', async () => ({ isError: true, content: [{ type: 'text', text: 'boom' }] }))
+    const wrapped = withAuditLog('kb_note_write', 'write', async () => ({ isError: true, content: [{ type: 'text', text: 'boom' }] }))
     await wrapped({})
     await new Promise((r) => setTimeout(r, 20))
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
@@ -54,7 +55,7 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
 
   it('records ok:false when the handler throws', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('editor_kb_write_note', 'editor', async () => {
+    const wrapped = withAuditLog('kb_note_write', 'write', async () => {
       throw new Error('kaboom')
     })
     await expect(wrapped({})).rejects.toThrow(/kaboom/)
@@ -64,29 +65,29 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
     expect(event.error).toBe('kaboom')
   })
 
-  it('skips viewer tools by default (mode=writes)', async () => {
+  it('skips read-role tools by default (mode=writes)', async () => {
     const { withAuditLog } = await import('./audit-log.js')
     const handler = vi.fn(async () => ({ content: [{ type: 'text', text: 'ok' }] }))
-    const wrapped = withAuditLog('viewer_kb_read_note', 'viewer', handler)
+    const wrapped = withAuditLog('kb_note_read', 'read', handler)
     expect(wrapped).toBe(handler)
   })
 
-  it('logs viewer tools when MCP_KB_FS_AUDIT_LOG=all', async () => {
+  it('logs read-role tools when MCP_KB_FS_AUDIT_LOG=all', async () => {
     process.env.MCP_KB_FS_AUDIT_LOG = 'all'
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('viewer_kb_read_note', 'viewer', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog('kb_note_read', 'read', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
     await wrapped({})
     await new Promise((r) => setTimeout(r, 20))
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
-    expect(event.role).toBe('viewer')
+    expect(event.role).toBe('read')
   })
 
   it('skips both roles when MCP_KB_FS_AUDIT_LOG=off and never creates a log file', async () => {
     process.env.MCP_KB_FS_AUDIT_LOG = 'off'
     const { withAuditLog } = await import('./audit-log.js')
-    const editor = vi.fn(async (_args: unknown) => ({ content: [{ type: 'text', text: 'ok' }] }))
-    expect(withAuditLog('editor_kb_write_note', 'editor', editor)).toBe(editor)
-    await editor({})
+    const writeHandler = vi.fn(async (_args: unknown) => ({ content: [{ type: 'text', text: 'ok' }] }))
+    expect(withAuditLog('kb_note_write', 'write', writeHandler)).toBe(writeHandler)
+    await writeHandler({})
     await new Promise((r) => setTimeout(r, 20))
     await expect(fs.access(logPath)).rejects.toThrow()
   })
@@ -102,7 +103,7 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
     expect(((await fs.stat(logPath)).mode & 0o777).toString(8)).toBe('644')
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('editor_kb_write_note', 'editor', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog('kb_note_write', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
     await wrapped({})
     await new Promise((r) => setTimeout(r, 20))
 
@@ -111,7 +112,7 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
   })
 })
 
-describe('roleFromToolName / makeRoleGatedRegister (mcp-kb-fs)', () => {
+describe('roleFromAnnotations / makeRoleGatedRegister (mcp-kb-fs)', () => {
   beforeEach(() => {
     vi.resetModules()
     delete process.env.MCP_KB_FS_ROLES
@@ -121,41 +122,51 @@ describe('roleFromToolName / makeRoleGatedRegister (mcp-kb-fs)', () => {
     delete process.env.MCP_KB_FS_ROLES
   })
 
-  it('infers role from a viewer_ prefix', async () => {
-    const { roleFromToolName } = await import('./roles.js')
-    expect(roleFromToolName('viewer_kb_read_note')).toBe('viewer')
+  it('maps READ_ONLY annotations to read', async () => {
+    const { roleFromAnnotations } = await import('./roles.js')
+    expect(roleFromAnnotations(READ_ONLY)).toBe('read')
   })
 
-  it('infers role from an editor_ prefix', async () => {
-    const { roleFromToolName } = await import('./roles.js')
-    expect(roleFromToolName('editor_kb_write_note')).toBe('editor')
+  it('maps DESTRUCTIVE annotations to write', async () => {
+    const { roleFromAnnotations } = await import('./roles.js')
+    expect(roleFromAnnotations(DESTRUCTIVE)).toBe('write')
   })
 
-  it('throws when the tool name lacks a viewer_/editor_ prefix', async () => {
-    const { roleFromToolName } = await import('./roles.js')
-    expect(() => roleFromToolName('kb_read_note')).toThrow(/expected "viewer_" or "editor_" prefix/)
+  it('defaults to write (fail-safe) when annotations are missing', async () => {
+    const { roleFromAnnotations } = await import('./roles.js')
+    expect(roleFromAnnotations(undefined)).toBe('write')
   })
 
-  it('skips registration for tools whose role is not enabled (default: viewer only)', async () => {
+  it('skips registration for tools whose role is not enabled (default: read only)', async () => {
     const { makeRoleGatedRegister } = await import('./roles.js')
     const registerTool = vi.fn()
     const fakeServer = { registerTool } as unknown as Parameters<typeof makeRoleGatedRegister>[0]
     const gated = makeRoleGatedRegister(fakeServer)
-    gated('viewer_kb_read_note', { title: 't', description: 'd' } as never, (async () => ({ content: [] })) as never)
-    gated('editor_kb_write_note', { title: 't', description: 'd' } as never, (async () => ({ content: [] })) as never)
+    gated('kb_note_read', { title: 't', description: 'd', annotations: READ_ONLY } as never, (async () => ({ content: [] })) as never)
+    gated('kb_note_write', { title: 't', description: 'd', annotations: DESTRUCTIVE } as never, (async () => ({ content: [] })) as never)
     expect(registerTool).toHaveBeenCalledTimes(1)
-    expect((registerTool.mock.calls[0] as unknown[])[0]).toBe('viewer_kb_read_note')
+    expect((registerTool.mock.calls[0] as unknown[])[0]).toBe('kb_note_read')
   })
 
-  it('registers both roles when MCP_KB_FS_ROLES=viewer,editor', async () => {
-    process.env.MCP_KB_FS_ROLES = 'viewer,editor'
+  it('registers both roles when MCP_KB_FS_ROLES=read,write', async () => {
+    process.env.MCP_KB_FS_ROLES = 'read,write'
     const { makeRoleGatedRegister } = await import('./roles.js')
     const registerTool = vi.fn()
     const fakeServer = { registerTool } as unknown as Parameters<typeof makeRoleGatedRegister>[0]
     const gated = makeRoleGatedRegister(fakeServer)
-    gated('viewer_kb_read_note', { title: 't', description: 'd' } as never, (async () => ({ content: [] })) as never)
-    gated('editor_kb_write_note', { title: 't', description: 'd' } as never, (async () => ({ content: [] })) as never)
+    gated('kb_note_read', { title: 't', description: 'd', annotations: READ_ONLY } as never, (async () => ({ content: [] })) as never)
+    gated('kb_note_write', { title: 't', description: 'd', annotations: DESTRUCTIVE } as never, (async () => ({ content: [] })) as never)
     expect(registerTool).toHaveBeenCalledTimes(2)
+  })
+
+  it('treats an unannotated tool as write (fail-safe)', async () => {
+    const { makeRoleGatedRegister } = await import('./roles.js')
+    const registerTool = vi.fn()
+    const fakeServer = { registerTool } as unknown as Parameters<typeof makeRoleGatedRegister>[0]
+    const gated = makeRoleGatedRegister(fakeServer)
+    gated('unannotated_tool', { title: 't', description: 'd' } as never, (async () => ({ content: [] })) as never)
+    // default ENABLED_ROLES is 'read' only → unannotated (treated as write) is skipped
+    expect(registerTool).toHaveBeenCalledTimes(0)
   })
 
   it('rejects unknown MCP_KB_FS_ROLES values at config load', async () => {

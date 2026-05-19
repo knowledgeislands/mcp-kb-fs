@@ -110,7 +110,7 @@ const extractErrorText = (result: unknown): string | undefined => {
 
 export const withAuditLog = (toolName: string, role: Role, callback: ToolCallback): ToolCallback => {
   if (AUDIT_LOG_MODE === 'off') return callback
-  if (role === 'viewer' && AUDIT_LOG_MODE !== 'all') return callback
+  if (role === 'read' && AUDIT_LOG_MODE !== 'all') return callback
   return async (...callbackArgs: unknown[]) => {
     const start = Date.now()
     const args = callbackArgs[0]

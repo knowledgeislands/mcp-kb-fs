@@ -5,7 +5,7 @@ import { DESTRUCTIVE, READ_ONLY } from '../../utils/annotations.js'
 
 export const registerNotesTools = (server: McpServer): void => {
   server.registerTool(
-    'viewer_kb_read_note',
+    'kb_note_read',
     {
       title: 'Read KB Note',
       description: `Read the full markdown content of a Knowledge Base note by its KB-relative path.
@@ -31,7 +31,7 @@ Errors:
   )
 
   server.registerTool(
-    'viewer_kb_list_notes',
+    'kb_notes_list',
     {
       title: 'List KB Notes',
       description: `List markdown notes (.md files) inside a knowledge base directory.
@@ -54,7 +54,7 @@ Returns:
   )
 
   server.registerTool(
-    'viewer_kb_list_folders',
+    'kb_folders_list',
     {
       title: 'List KB Folders',
       description: `List subfolders inside a knowledge base directory.
@@ -77,7 +77,7 @@ Returns:
   )
 
   server.registerTool(
-    'editor_kb_write_note',
+    'kb_note_write',
     {
       title: 'Write KB Note',
       description: `Write or overwrite a markdown note in the knowledge base.

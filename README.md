@@ -16,23 +16,20 @@ An MCP (Model Context Protocol) server that gives Claude read and write access t
 
 ## Available Tools
 
-Tools are grouped by **role**. Roles are toggled via the `MCP_KB_FS_ROLES` env var (comma-separated; defaults to `viewer` only when unset). Disabled-role tools are silently skipped at registration.
+Tools follow the convention `<app>_<resource>_<action>`. Each tool's role (`read` for read-only, `write` for destructive) is derived from its MCP annotations (`readOnlyHint`). Roles are toggled via the `MCP_KB_FS_ROLES` env var (comma-separated; defaults to `read` only when unset). Disabled-role tools are silently skipped at registration.
 
-- **`viewer`** — read-only inventory and inspection (`viewer_*`).
-- **`editor`** — destructive writes (`editor_*`).
+| Tool              | Role    | Description                                                                 |
+| ----------------- | ------- | --------------------------------------------------------------------------- |
+| `kb_note_read`    | `read`  | Read the full markdown content of a note by KB-relative path.               |
+| `kb_notes_list`   | `read`  | List `.md` files in a knowledge base directory; optional recursive descent. |
+| `kb_folders_list` | `read`  | List subfolders in a knowledge base directory; optional recursive descent.  |
+| `kb_note_write`   | `write` | Write or overwrite a note. Optionally creates parent dirs (`create_dirs`).  |
 
-| Tool                     | Role     | Description                                                                 |
-| ------------------------ | -------- | --------------------------------------------------------------------------- |
-| `viewer_kb_read_note`    | `viewer` | Read the full markdown content of a note by KB-relative path.               |
-| `viewer_kb_list_notes`   | `viewer` | List `.md` files in a knowledge base directory; optional recursive descent. |
-| `viewer_kb_list_folders` | `viewer` | List subfolders in a knowledge base directory; optional recursive descent.  |
-| `editor_kb_write_note`   | `editor` | Write or overwrite a note. Optionally creates parent dirs (`create_dirs`).  |
-
-### `viewer_kb_read_note`
+### `kb_note_read`
 
 ```json
 {
-  "name": "viewer_kb_read_note",
+  "name": "kb_note_read",
   "arguments": { "path": "Pillars/Finance/Budget.md" }
 }
 ```
@@ -44,33 +41,33 @@ Returns the raw markdown text. Path must end in `.md`. Errors:
 - `Path is protected: "<path>"` (root-level meta or any dotfile)
 - `Path escapes root: "<path>"` (lexical or symlink)
 
-### `viewer_kb_list_notes`
+### `kb_notes_list`
 
 ```json
 {
-  "name": "viewer_kb_list_notes",
+  "name": "kb_notes_list",
   "arguments": { "path": "Pillars", "recursive": true }
 }
 ```
 
 `path` defaults to `""` (knowledge base root). `recursive` defaults to `false`. Returns a newline-separated list of KB-relative `.md` paths, or `(no notes found)`.
 
-### `viewer_kb_list_folders`
+### `kb_folders_list`
 
 ```json
 {
-  "name": "viewer_kb_list_folders",
+  "name": "kb_folders_list",
   "arguments": { "path": "Pillars", "recursive": true }
 }
 ```
 
-Same input shape as `viewer_kb_list_notes`. Returns a newline-separated list of KB-relative folder paths, or `(no folders found)`.
+Same input shape as `kb_notes_list`. Returns a newline-separated list of KB-relative folder paths, or `(no folders found)`.
 
-### `editor_kb_write_note`
+### `kb_note_write`
 
 ```json
 {
-  "name": "editor_kb_write_note",
+  "name": "kb_note_write",
   "arguments": {
     "path": "Inbox/2026-04-30.md",
     "content": "# Notes\n\n- ...",
@@ -87,7 +84,7 @@ Same input shape as `viewer_kb_list_notes`. Returns a newline-separated list of 
 2. **Pick a knowledge base directory** — any folder of markdown files (can be empty).
 3. **Build**: `bun run build`
 4. **Configure Claude Desktop** with the path to `dist/mcp-server/index.js` and your `MCP_KB_FS_ROOT_PATH` (see [Configuration](#configuration)).
-5. **Restart Claude Desktop** — the enabled `viewer_*` / `editor_*` tools should appear (defaults to viewer-only).
+5. **Restart Claude Desktop** — the enabled `kb_*` tools should appear (defaults to read-only).
 
 ## Example Conversations
 
@@ -97,25 +94,25 @@ Concrete asks you might make of Claude with this server connected.
 
 > "List every note under `Pillars/Finance`, recursively."
 
-Claude calls [`viewer_kb_list_notes`](#viewer_kb_list_notes) with `path: "Pillars/Finance", recursive: true` and returns the newline-separated list of KB-relative `.md` paths. Folders are excluded; only `.md` files appear.
+Claude calls [`kb_notes_list`](#kb_notes_list) with `path: "Pillars/Finance", recursive: true` and returns the newline-separated list of KB-relative `.md` paths. Folders are excluded; only `.md` files appear.
 
 **Read a specific note:**
 
 > "Show me my Budget.md note from `Pillars/Finance`."
 
-Claude calls [`viewer_kb_read_note`](#viewer_kb_read_note) with the KB-relative path. If the path doesn't end in `.md`, escapes the root, or matches a protected pattern (dotfile, root-level repo-meta), the tool returns a clear error string instead of silently failing.
+Claude calls [`kb_note_read`](#kb_note_read) with the KB-relative path. If the path doesn't end in `.md`, escapes the root, or matches a protected pattern (dotfile, root-level repo-meta), the tool returns a clear error string instead of silently failing.
 
 **Capture meeting notes:**
 
 > "Save these notes as today's daily under `Inbox/2026-05-13.md` — create the Inbox folder if it doesn't exist yet."
 
-Claude calls [`editor_kb_write_note`](#editor_kb_write_note) with the markdown content and `create_dirs: true` (the default). The path goes through both the lexical and `realpath` safety checks before any byte is written. The `editor` role must be enabled via `MCP_KB_FS_ROLES=viewer,editor` for this tool to be available.
+Claude calls [`kb_note_write`](#kb_note_write) with the markdown content and `create_dirs: true` (the default). The path goes through both the lexical and `realpath` safety checks before any byte is written. The `write` role must be enabled via `MCP_KB_FS_ROLES=read,write` for this tool to be available.
 
 **Discover structure:**
 
 > "What top-level folders exist in my knowledge base?"
 
-Claude calls [`viewer_kb_list_folders`](#viewer_kb_list_folders) with `path: ""` (the root) and `recursive: false`. Same input shape as `viewer_kb_list_notes`; returns directories only.
+Claude calls [`kb_folders_list`](#kb_folders_list) with `path: ""` (the root) and `recursive: false`. Same input shape as `kb_notes_list`; returns directories only.
 
 ## Installation
 
@@ -137,7 +134,7 @@ bun install
 | Name | Required | Description |
 | --- | --- | --- |
 | `MCP_KB_FS_ROOT_PATH` | yes | Absolute path or `~/...` to the knowledge base root. The server asserts on startup. |
-| `MCP_KB_FS_ROLES` | no | Comma-separated list of enabled roles. Allowed values: `viewer`, `editor`. Defaults to `viewer` only (least privilege) when unset or empty. Tool names are prefixed with `viewer_` or `editor_` and are only registered when the corresponding role is enabled; tools for disabled roles are silently skipped. An unknown value aborts startup. |
+| `MCP_KB_FS_ROLES` | no | Comma-separated list of enabled roles. Allowed values: `read`, `write`. Defaults to `read` only (least privilege) when unset or empty. Each tool's role is derived from its MCP annotations (`readOnlyHint: true` → `read`, otherwise → `write`); only tools whose role is enabled here are registered. An unknown value aborts startup. |
 | `NODE_ENV` | no | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
 
 ### Claude Desktop Configuration
@@ -194,7 +191,7 @@ bun run lint:md             # prettier + markdownlint for *.md
 - **Protected paths** are filtered out of list tools and rejected by read/write tools with `Path is protected: "<path>"`. Two rules:
   - any path segment beginning with `.` is protected at any depth (covers `.git`, `.obsidian`, `.env`, etc.);
   - root-level basenames `README`, `CLAUDE`, `LICENSE`, `CHANGELOG`, `CONTRIBUTING`, `SECURITY`, `CODE_OF_CONDUCT`, `AGENTS` (case-insensitive, with optional `.md`/`.txt`) are protected so the KB folder's own repo-meta isn't exposed. Nested files with the same names (e.g. `archive/README.md`) remain accessible.
-- **File-type discipline** — `viewer_kb_read_note`/`editor_kb_write_note` reject paths that don't end in `.md`; `viewer_kb_list_folders` only ever returns directories; `viewer_kb_list_notes` only ever returns `.md` files.
+- **File-type discipline** — `kb_note_read`/`kb_note_write` reject paths that don't end in `.md`; `kb_folders_list` only ever returns directories; `kb_notes_list` only ever returns `.md` files.
 - The server has no network access and performs no authentication. Trust is delegated entirely to the local OS user running it.
 
 ## Directory Structure
@@ -235,7 +232,7 @@ The path matches a protected pattern (a dotfile/dotdir at any depth, or a root-l
 
 **Tool returns `Notes must end in ".md"`**
 
-`viewer_kb_read_note` and `editor_kb_write_note` only operate on markdown files. Rename the path to end in `.md`.
+`kb_note_read` and `kb_note_write` only operate on markdown files. Rename the path to end in `.md`.
 
 **Cannot find module after pulling changes**
 
