@@ -16,14 +16,14 @@ An MCP (Model Context Protocol) server that gives Claude read and write access t
 
 ## Available Tools
 
-Tools follow the convention `<app>_<resource>_<action>`. Each tool's role (`read` for read-only, `write` for destructive) is derived from its MCP annotations (`readOnlyHint`). Roles are toggled via the `MCP_KB_FS_ROLES` env var (comma-separated; defaults to `read` only when unset). Disabled-role tools are silently skipped at registration.
+Tools follow the convention `<app>_<resource>_<action>`. Each tool's access level (`read`, `write`, or `destructive`) is derived from its MCP annotations (`readOnlyHint` / `destructiveHint`). The registered surface is controlled by the `MCP_KB_FS_ACCESS_LEVEL` env var (defaults to `read`; levels nest, so `write` adds non-destructive mutations and `destructive` adds delete/overwrite). Tools above the configured level are silently skipped at registration.
 
-| Tool              | Role    | Description                                                                 |
-| ----------------- | ------- | --------------------------------------------------------------------------- |
-| `kb_note_read`    | `read`  | Read the full markdown content of a note by KB-relative path.               |
-| `kb_notes_list`   | `read`  | List `.md` files in a knowledge base directory; optional recursive descent. |
-| `kb_folders_list` | `read`  | List subfolders in a knowledge base directory; optional recursive descent.  |
-| `kb_note_write`   | `write` | Write or overwrite a note. Optionally creates parent dirs (`create_dirs`).  |
+| Tool              | Level         | Description                                                                 |
+| ----------------- | ------------- | --------------------------------------------------------------------------- |
+| `kb_note_read`    | `read`        | Read the full markdown content of a note by KB-relative path.               |
+| `kb_notes_list`   | `read`        | List `.md` files in a knowledge base directory; optional recursive descent. |
+| `kb_folders_list` | `read`        | List subfolders in a knowledge base directory; optional recursive descent.  |
+| `kb_note_write`   | `destructive` | Write or overwrite a note. Optionally creates parent dirs (`create_dirs`).  |
 
 ### `kb_note_read`
 
@@ -106,7 +106,7 @@ Claude calls [`kb_note_read`](#kb_note_read) with the KB-relative path. If the p
 
 > "Save these notes as today's daily under `Inbox/2026-05-13.md` — create the Inbox folder if it doesn't exist yet."
 
-Claude calls [`kb_note_write`](#kb_note_write) with the markdown content and `create_dirs: true` (the default). The path goes through both the lexical and `realpath` safety checks before any byte is written. The `write` role must be enabled via `MCP_KB_FS_ROLES=read,write` for this tool to be available.
+Claude calls [`kb_note_write`](#kb_note_write) with the markdown content and `create_dirs: true` (the default). The path goes through both the lexical and `realpath` safety checks before any byte is written. `kb_note_write` is annotated `DESTRUCTIVE` (it can overwrite an existing note), so `MCP_KB_FS_ACCESS_LEVEL=destructive` is required for it to register.
 
 **Discover structure:**
 
@@ -134,7 +134,7 @@ bun install
 | Name | Required | Description |
 | --- | --- | --- |
 | `MCP_KB_FS_ROOT_PATH` | yes | Absolute path or `~/...` to the knowledge base root. The server asserts on startup. |
-| `MCP_KB_FS_ROLES` | no | Comma-separated list of enabled roles. Allowed values: `read`, `write`. Defaults to `read` only (least privilege) when unset or empty. Each tool's role is derived from its MCP annotations (`readOnlyHint: true` → `read`, otherwise → `write`); only tools whose role is enabled here are registered. An unknown value aborts startup. |
+| `MCP_KB_FS_ACCESS_LEVEL` | no | Maximum tool access level to register. One of: `read` (default — read-only tools only, least privilege), `write` (adds non-destructive mutations), `destructive` (adds delete/overwrite tools such as `kb_note_write`). Levels nest. Each tool's level is derived from its MCP annotations (`readOnlyHint: true` → `read`; `destructiveHint: true` → `destructive`; explicit `readOnlyHint: false` AND `destructiveHint: false` → `write`; missing annotations → `destructive` fail-safe); a tool registers when its derived level ≤ the configured level. An unknown value aborts startup. |
 | `NODE_ENV` | no | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
 
 ### Claude Desktop Configuration
