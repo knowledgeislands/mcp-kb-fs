@@ -14,12 +14,12 @@
 import * as fs from 'node:fs/promises'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { AUDIT_LOG_MODE, AUDIT_LOG_PATH, ENABLED_ROLES, ROOT_PATH } from '../config.js'
+import { ACCESS_LEVEL, AUDIT_LOG_MODE, AUDIT_LOG_PATH, ROOT_PATH } from '../config.js'
 import { registerNotesTools } from '../tools/index.js'
-import { makeRoleGatedRegister } from '../utils/roles.js'
+import { makeAccessGatedRegister } from '../utils/access-level.js'
 
 console.error(`mcp-kb-fs starting...`)
-console.error(`  MCP_KB_FS_ROLES=${[...ENABLED_ROLES].sort().join(',')}`)
+console.error(`  MCP_KB_FS_ACCESS_LEVEL=${ACCESS_LEVEL}`)
 console.error(`  MCP_KB_FS_ROOT_PATH=${ROOT_PATH}`)
 console.error(`  MCP_KB_FS_AUDIT_LOG=${AUDIT_LOG_MODE}${AUDIT_LOG_MODE === 'off' ? '' : ` (path: ${AUDIT_LOG_PATH})`}`)
 
@@ -31,7 +31,7 @@ const server = new McpServer({
 // Monkey-patch registerTool so every tool's callback is wrapped with the
 // audit logger. Done in-place rather than passing a wrapped reference because
 // registerNotesTools calls server.registerTool directly.
-server.registerTool = makeRoleGatedRegister(server)
+server.registerTool = makeAccessGatedRegister(server)
 
 registerNotesTools(server)
 

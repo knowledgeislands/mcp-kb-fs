@@ -18,14 +18,16 @@ Run `bun run` with no args for the full script list.
 
 Tool names follow `<app>_<resource>_<action>` (snake_case) with `<app>` = `kb`. Plural resource for collection ops, singular for single-item ops (`kb_notes_list`, `kb_folders_list`, `kb_note_read`, `kb_note_write`).
 
-### Role gate — driven by annotations, not names
+### Access-level gate — driven by annotations, not names
 
-[src/utils/roles.ts](./src/utils/roles.ts) `makeRoleGatedRegister()` decides at startup whether to register each tool, based on `config.annotations.readOnlyHint`:
+[src/utils/access-level.ts](./src/utils/access-level.ts) `makeAccessGatedRegister()` decides at startup whether to register each tool, based on `config.annotations`:
 
-- `readOnlyHint: true` → `read` role
-- anything else → `write` role (fail-safe; an unannotated tool is treated as destructive)
+- `readOnlyHint: true` → `read`
+- `destructiveHint: true` → `destructive`
+- explicit `readOnlyHint: false` AND `destructiveHint: false` → `write` (non-destructive mutation)
+- anything else (unannotated / partially annotated) → `destructive` (fail-safe)
 
-Only tools whose role is in `MCP_KB_FS_ROLES` (default: `read`) are registered. New tools MUST set `annotations` to one of the presets in [src/utils/annotations.ts](./src/utils/annotations.ts): `READ_ONLY` or `DESTRUCTIVE`. Do not bypass the proxy.
+A tool registers when its derived level is at or below `MCP_KB_FS_ACCESS_LEVEL` (default: `read`). Levels nest: `read` registers only readers; `write` adds non-destructive mutations; `destructive` adds the rest. New tools MUST set `annotations` to one of the presets in [src/utils/annotations.ts](./src/utils/annotations.ts): `READ_ONLY` or `DESTRUCTIVE`. Do not bypass the proxy.
 
 ## Security Requirements
 

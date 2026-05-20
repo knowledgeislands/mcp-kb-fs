@@ -21,14 +21,14 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
     delete process.env.MCP_KB_FS_AUDIT_LOG
   })
 
-  it('appends an event line for a write-role tool', async () => {
+  it('appends an event line for a destructive-level tool', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('kb_note_write', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog('kb_note_write', 'destructive', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
     await wrapped({ path: 'memo.md' })
     await new Promise((r) => setTimeout(r, 20))
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
     expect(event.tool).toBe('kb_note_write')
-    expect(event.role).toBe('write')
+    expect(event.level).toBe('destructive')
     expect(event.ok).toBe(true)
     expect(event.server).toBe('mcp-kb-fs')
     expect(event.args).toEqual({ path: 'memo.md' })
@@ -36,7 +36,7 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
 
   it('redacts the content field on writeNote-style args', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('kb_note_write', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog('kb_note_write', 'destructive', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
     await wrapped({ path: 'memo.md', content: 'x'.repeat(5000) })
     await new Promise((r) => setTimeout(r, 20))
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
@@ -45,7 +45,7 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
 
   it('records ok:false when the result has isError:true', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('kb_note_write', 'write', async () => ({ isError: true, content: [{ type: 'text', text: 'boom' }] }))
+    const wrapped = withAuditLog('kb_note_write', 'destructive', async () => ({ isError: true, content: [{ type: 'text', text: 'boom' }] }))
     await wrapped({})
     await new Promise((r) => setTimeout(r, 20))
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
@@ -55,7 +55,7 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
 
   it('records ok:false when the handler throws', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('kb_note_write', 'write', async () => {
+    const wrapped = withAuditLog('kb_note_write', 'destructive', async () => {
       throw new Error('kaboom')
     })
     await expect(wrapped({})).rejects.toThrow(/kaboom/)
@@ -65,28 +65,28 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
     expect(event.error).toBe('kaboom')
   })
 
-  it('skips read-role tools by default (mode=writes)', async () => {
+  it('skips read-level tools by default (mode=writes)', async () => {
     const { withAuditLog } = await import('./audit-log.js')
     const handler = vi.fn(async () => ({ content: [{ type: 'text', text: 'ok' }] }))
     const wrapped = withAuditLog('kb_note_read', 'read', handler)
     expect(wrapped).toBe(handler)
   })
 
-  it('logs read-role tools when MCP_KB_FS_AUDIT_LOG=all', async () => {
+  it('logs read-level tools when MCP_KB_FS_AUDIT_LOG=all', async () => {
     process.env.MCP_KB_FS_AUDIT_LOG = 'all'
     const { withAuditLog } = await import('./audit-log.js')
     const wrapped = withAuditLog('kb_note_read', 'read', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
     await wrapped({})
     await new Promise((r) => setTimeout(r, 20))
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
-    expect(event.role).toBe('read')
+    expect(event.level).toBe('read')
   })
 
-  it('skips both roles when MCP_KB_FS_AUDIT_LOG=off and never creates a log file', async () => {
+  it('skips both levels when MCP_KB_FS_AUDIT_LOG=off and never creates a log file', async () => {
     process.env.MCP_KB_FS_AUDIT_LOG = 'off'
     const { withAuditLog } = await import('./audit-log.js')
     const writeHandler = vi.fn(async (_args: unknown) => ({ content: [{ type: 'text', text: 'ok' }] }))
-    expect(withAuditLog('kb_note_write', 'write', writeHandler)).toBe(writeHandler)
+    expect(withAuditLog('kb_note_write', 'destructive', writeHandler)).toBe(writeHandler)
     await writeHandler({})
     await new Promise((r) => setTimeout(r, 20))
     await expect(fs.access(logPath)).rejects.toThrow()
@@ -103,7 +103,7 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
     expect(((await fs.stat(logPath)).mode & 0o777).toString(8)).toBe('644')
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('kb_note_write', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog('kb_note_write', 'destructive', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
     await wrapped({})
     await new Promise((r) => setTimeout(r, 20))
 
@@ -112,65 +112,85 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
   })
 })
 
-describe('roleFromAnnotations / makeRoleGatedRegister (mcp-kb-fs)', () => {
+describe('levelFromAnnotations / makeAccessGatedRegister (mcp-kb-fs)', () => {
   beforeEach(() => {
     vi.resetModules()
-    delete process.env.MCP_KB_FS_ROLES
+    delete process.env.MCP_KB_FS_ACCESS_LEVEL
   })
 
   afterEach(() => {
-    delete process.env.MCP_KB_FS_ROLES
+    delete process.env.MCP_KB_FS_ACCESS_LEVEL
   })
 
   it('maps READ_ONLY annotations to read', async () => {
-    const { roleFromAnnotations } = await import('./roles.js')
-    expect(roleFromAnnotations(READ_ONLY)).toBe('read')
+    const { levelFromAnnotations } = await import('./access-level.js')
+    expect(levelFromAnnotations(READ_ONLY)).toBe('read')
   })
 
-  it('maps DESTRUCTIVE annotations to write', async () => {
-    const { roleFromAnnotations } = await import('./roles.js')
-    expect(roleFromAnnotations(DESTRUCTIVE)).toBe('write')
+  it('maps DESTRUCTIVE annotations to destructive', async () => {
+    const { levelFromAnnotations } = await import('./access-level.js')
+    expect(levelFromAnnotations(DESTRUCTIVE)).toBe('destructive')
   })
 
-  it('defaults to write (fail-safe) when annotations are missing', async () => {
-    const { roleFromAnnotations } = await import('./roles.js')
-    expect(roleFromAnnotations(undefined)).toBe('write')
+  it('maps explicit non-destructive write annotations to write', async () => {
+    const { levelFromAnnotations } = await import('./access-level.js')
+    expect(levelFromAnnotations({ readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false })).toBe('write')
   })
 
-  it('skips registration for tools whose role is not enabled (default: read only)', async () => {
-    const { makeRoleGatedRegister } = await import('./roles.js')
+  it('defaults to destructive (fail-safe) when annotations are missing', async () => {
+    const { levelFromAnnotations } = await import('./access-level.js')
+    expect(levelFromAnnotations(undefined)).toBe('destructive')
+  })
+
+  it('skips registration for tools whose level exceeds the gate (default: read only)', async () => {
+    const { makeAccessGatedRegister } = await import('./access-level.js')
     const registerTool = vi.fn()
-    const fakeServer = { registerTool } as unknown as Parameters<typeof makeRoleGatedRegister>[0]
-    const gated = makeRoleGatedRegister(fakeServer)
+    const fakeServer = { registerTool } as unknown as Parameters<typeof makeAccessGatedRegister>[0]
+    const gated = makeAccessGatedRegister(fakeServer)
     gated('kb_note_read', { title: 't', description: 'd', annotations: READ_ONLY } as never, (async () => ({ content: [] })) as never)
     gated('kb_note_write', { title: 't', description: 'd', annotations: DESTRUCTIVE } as never, (async () => ({ content: [] })) as never)
     expect(registerTool).toHaveBeenCalledTimes(1)
     expect((registerTool.mock.calls[0] as unknown[])[0]).toBe('kb_note_read')
   })
 
-  it('registers both roles when MCP_KB_FS_ROLES=read,write', async () => {
-    process.env.MCP_KB_FS_ROLES = 'read,write'
-    const { makeRoleGatedRegister } = await import('./roles.js')
+  it('registers read + non-destructive writes when MCP_KB_FS_ACCESS_LEVEL=write (but not destructive ones)', async () => {
+    process.env.MCP_KB_FS_ACCESS_LEVEL = 'write'
+    const { makeAccessGatedRegister } = await import('./access-level.js')
     const registerTool = vi.fn()
-    const fakeServer = { registerTool } as unknown as Parameters<typeof makeRoleGatedRegister>[0]
-    const gated = makeRoleGatedRegister(fakeServer)
+    const fakeServer = { registerTool } as unknown as Parameters<typeof makeAccessGatedRegister>[0]
+    const gated = makeAccessGatedRegister(fakeServer)
+    const ADDITIVE = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } as const
     gated('kb_note_read', { title: 't', description: 'd', annotations: READ_ONLY } as never, (async () => ({ content: [] })) as never)
-    gated('kb_note_write', { title: 't', description: 'd', annotations: DESTRUCTIVE } as never, (async () => ({ content: [] })) as never)
+    gated('kb_note_add', { title: 't', description: 'd', annotations: ADDITIVE } as never, (async () => ({ content: [] })) as never)
+    gated('kb_note_delete', { title: 't', description: 'd', annotations: DESTRUCTIVE } as never, (async () => ({ content: [] })) as never)
+    expect(registerTool).toHaveBeenCalledTimes(2)
+    expect((registerTool.mock.calls[0] as unknown[])[0]).toBe('kb_note_read')
+    expect((registerTool.mock.calls[1] as unknown[])[0]).toBe('kb_note_add')
+  })
+
+  it('registers all levels when MCP_KB_FS_ACCESS_LEVEL=destructive', async () => {
+    process.env.MCP_KB_FS_ACCESS_LEVEL = 'destructive'
+    const { makeAccessGatedRegister } = await import('./access-level.js')
+    const registerTool = vi.fn()
+    const fakeServer = { registerTool } as unknown as Parameters<typeof makeAccessGatedRegister>[0]
+    const gated = makeAccessGatedRegister(fakeServer)
+    gated('kb_note_read', { title: 't', description: 'd', annotations: READ_ONLY } as never, (async () => ({ content: [] })) as never)
+    gated('kb_note_delete', { title: 't', description: 'd', annotations: DESTRUCTIVE } as never, (async () => ({ content: [] })) as never)
     expect(registerTool).toHaveBeenCalledTimes(2)
   })
 
-  it('treats an unannotated tool as write (fail-safe)', async () => {
-    const { makeRoleGatedRegister } = await import('./roles.js')
+  it('treats an unannotated tool as destructive (fail-safe)', async () => {
+    const { makeAccessGatedRegister } = await import('./access-level.js')
     const registerTool = vi.fn()
-    const fakeServer = { registerTool } as unknown as Parameters<typeof makeRoleGatedRegister>[0]
-    const gated = makeRoleGatedRegister(fakeServer)
+    const fakeServer = { registerTool } as unknown as Parameters<typeof makeAccessGatedRegister>[0]
+    const gated = makeAccessGatedRegister(fakeServer)
     gated('unannotated_tool', { title: 't', description: 'd' } as never, (async () => ({ content: [] })) as never)
-    // default ENABLED_ROLES is 'read' only → unannotated (treated as write) is skipped
+    // default gate is 'read' only → unannotated (treated as destructive) is skipped
     expect(registerTool).toHaveBeenCalledTimes(0)
   })
 
-  it('rejects unknown MCP_KB_FS_ROLES values at config load', async () => {
-    process.env.MCP_KB_FS_ROLES = 'admin'
-    await expect(import('../config.js')).rejects.toThrow(/Invalid MCP_KB_FS_ROLES entries: admin/)
+  it('rejects unknown MCP_KB_FS_ACCESS_LEVEL values at config load', async () => {
+    process.env.MCP_KB_FS_ACCESS_LEVEL = 'admin'
+    await expect(import('../config.js')).rejects.toThrow(/Invalid MCP_KB_FS_ACCESS_LEVEL="admin"/)
   })
 })
