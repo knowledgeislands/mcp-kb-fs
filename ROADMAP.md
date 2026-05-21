@@ -9,3 +9,6 @@ Forward-looking plans only. Shipped features live in [README.md](./README.md); r
 ## Future Advanced Capabilities
 
 ## Tooling
+
+- Close remaining coverage gap to satisfy the 100% vitest threshold (currently 99.4% statements / 97.1% branches). Defensive `??` and rethrow arms in [src/notes.ts](./src/notes.ts) and [src/utils/audit-log.ts](./src/utils/audit-log.ts) need either tests or `/* v8 ignore */` markers — the same pattern m365 already documents.
+- Smoke test (`bun run test:smoke`) — boot the built server and verify the wire-level tool surface matches in-process registration. mcp-gmail has the reference implementation (`scripts/smoke.ts` + CI step); kb-fs lacks both.
