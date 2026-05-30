@@ -181,7 +181,7 @@ bun install
 | `MCP_KB_FS_AUDIT_LOG_PATH` | no | Path to the JSONL audit log. Default `~/.local/state/mcp-kb-fs/audit.jsonl`. |
 | `MCP_KB_FS_AUDIT_LOG_MAX_BYTES` | no | Size-based rotation threshold in bytes. Default `10485760` (10 MiB). Set to `0` to disable rotation. |
 | `MCP_KB_FS_AUDIT_LOG_KEEP` | no | Number of rotated audit-log files to retain. Default `5`. |
-| `NODE_ENV` | no | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
+| `NODE_ENV` | no | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`, which makes `loadConfig()` in [`src/config/index.ts`](./src/config/index.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
 
 ### Claude Desktop Configuration
 
@@ -213,7 +213,7 @@ MCP_KB_FS_ROOT_PATH=~/notes bun run server:mcp:dev
 
 This runs `src/mcp-server/index.ts` under `bun --watch`. Point Claude Desktop at this command during development if you want live reload.
 
-Alternatively, copy [`.env.example`](./.env.example) to `.env.development` and set `MCP_KB_FS_ROOT_PATH` there. The `server:mcp:dev` and `server:mcp:inspect` scripts run with `NODE_ENV=development`, and [`src/config.ts`](./src/config.ts) calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup — so it picks up `.env.development` from the CWD automatically. Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; env vars must come from the Desktop config `env` block there.
+Alternatively, copy [`.env.example`](./.env.example) to `.env.development` and set `MCP_KB_FS_ROOT_PATH` there. The `server:mcp:dev` and `server:mcp:inspect` scripts run with `NODE_ENV=development`, and `loadConfig()` in [`src/config/index.ts`](./src/config/index.ts) calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup — so it picks up `.env.development` from the CWD automatically. Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; env vars must come from the Desktop config `env` block there.
 
 ## Development
 
@@ -230,7 +230,7 @@ bun run lint:md             # prettier + markdownlint for *.md
 
 ## Security Model
 
-- The root is resolved once at startup from `MCP_KB_FS_ROOT_PATH`. `~` is expanded to the user home directory.
+- The root is resolved at startup from `MCP_KB_FS_ROOT_PATH` by `loadConfig()` into `config.rootPath`, then threaded into every tool. `~` is expanded to the user home directory.
 - Every tool input goes through two checks before any FS access:
   1. **Lexical** — `resolveWithinRoot()` normalises separators, strips leading slashes, then asserts the resolved absolute path is strictly inside the root. Inputs that resolve outside via `..` or absolute-style paths are rejected with `Path escapes root: "<input>"`.
   2. **Physical** — `assertRealPathWithinRoot()` calls `fs.realpath` on both the root and the target (or its deepest existing ancestor for new-file writes) and verifies the realpath of the target lives inside the realpath of the root. This rejects symlink-based escapes that the lexical check cannot see.
@@ -247,13 +247,20 @@ bun run lint:md             # prettier + markdownlint for *.md
 ├── package.json
 ├── tsconfig.json               # Base TS config
 ├── tsconfig.build.json         # Build config (emits to dist/)
-├── .env.example                # Template for MCP_KB_FS_ROOT_PATH (copy to .env.development)
+├── .env.example                # Env template (copy to .env.development)
 ├── src/
-│   ├── mcp-server/index.ts     # MCP server entry — boots and registers tools
-│   ├── config.ts               # MCP_KB_FS_ROOT_PATH env var loading
-│   ├── utils.ts                # Path safety + result helpers
-│   ├── protected.ts            # Protected-path predicate
-│   └── notes.ts                # Tool handlers (read/list/write)
+│   ├── mcp-server/index.ts     # MCP server entry — loadConfig() + registers tools
+│   ├── config/index.ts         # loadConfig(env?) → Config (no module-level singleton)
+│   ├── tools/                  # MCP tool definitions (validate args, call main/, map to envelope)
+│   │   └── notes/index.ts      # registerNotesTools(server, cfg)
+│   ├── main/                   # Real implementation, usable outside the MCP server
+│   │   └── notes/index.ts      # Tool handlers (read/list/write/rename/delete/create-folder)
+│   └── utils/                  # Cross-MCP helpers
+│       ├── utils.ts            # Path safety + result helpers
+│       ├── protected.ts        # Protected-path predicate
+│       ├── access-level.ts     # Annotation-driven access-level gate
+│       ├── annotations.ts      # Annotation presets (READ_ONLY/WRITE/…)
+│       └── audit-log.ts        # JSONL audit log + rotation
 └── dist/                       # Build output (gitignored, created by `bun run build`)
     └── mcp-server/index.js     # Compiled entry point used by Claude Desktop
 ```
@@ -288,11 +295,11 @@ bun install
 
 ## Extending the Server
 
-Add a new tool by registering it in [`src/mcp-server/index.ts`](./src/mcp-server/index.ts) via `server.registerTool(...)`. Follow the existing pattern:
+Add a new tool by registering it in [`src/tools/notes/index.ts`](./src/tools/notes/index.ts) (or a new group under `src/tools/`) via `server.registerTool(...)`, and put the implementation in a matching `src/main/` module that takes `Config` as its first argument. Follow the existing pattern:
 
 1. Validate inputs with a strict zod schema (`.strict()` to reject extras).
-2. Set MCP annotations honestly (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`).
-3. Run any path inputs through `resolveWithinRoot(MCP_KB_FS_ROOT_PATH, ...)` (and `assertRealPathWithinRoot` for FS-touching tools) before touching the filesystem.
+2. Set MCP annotations honestly (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) — the access-level gate derives the tool's tier from these.
+3. Run any path inputs through `resolveWithinRoot(cfg.rootPath, ...)` (and `assertRealPathWithinRoot` for FS-touching tools) before touching the filesystem.
 4. Return errors via `errorResult(...)` so the client sees `isError: true`.
 
-If [`src/notes.ts`](./src/notes.ts) grows beyond a comfortable size, split handlers into additional modules under `src/` and re-import them from `src/mcp-server/index.ts`.
+The tool layer stays thin — validate args, call a `src/main/` function with `cfg`, map the result to an MCP envelope. The real logic lives in [`src/main/notes/index.ts`](./src/main/notes/index.ts) so it can be reused outside the MCP server.
