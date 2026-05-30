@@ -122,6 +122,38 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
     expect(typeof event.args.preview).toBe('string')
   })
 
+  it('logs array args verbatim (sanitizeArgs only rewrites plain objects)', async () => {
+    const { withAuditLog } = await import('./audit-log.js')
+    const wrapped = withAuditLog('kb_note_write', 'destructive', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    await wrapped([1, 2, 3])
+    await new Promise((r) => setTimeout(r, 20))
+    const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
+    expect(event.args).toEqual([1, 2, 3])
+  })
+
+  it('records an error result that lacks a text content block (error stays undefined)', async () => {
+    const { withAuditLog } = await import('./audit-log.js')
+    // isError true but `content` is not an array, so extractErrorText returns undefined.
+    const wrapped = withAuditLog('kb_note_write', 'destructive', async () => ({ isError: true }) as never)
+    await wrapped({})
+    await new Promise((r) => setTimeout(r, 20))
+    const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
+    expect(event.ok).toBe(false)
+    expect(event.error).toBeUndefined()
+  })
+
+  it('never rotates when MCP_KB_FS_AUDIT_LOG_MAX_BYTES=0 (rotation disabled)', async () => {
+    process.env.MCP_KB_FS_AUDIT_LOG_MAX_BYTES = '0'
+    const { withAuditLog } = await import('./audit-log.js')
+    const wrapped = withAuditLog('kb_note_write', 'destructive', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    for (let i = 0; i < 6; i++) await wrapped({ idx: i, pad: 'x'.repeat(200) })
+    await new Promise((r) => setTimeout(r, 50))
+    // No rotation files exist; everything stayed in the single live log.
+    await expect(fs.access(`${logPath}.1`)).rejects.toThrow()
+    await expect(fs.access(logPath)).resolves.toBeUndefined()
+    delete process.env.MCP_KB_FS_AUDIT_LOG_MAX_BYTES
+  })
+
   it('rotates the audit log when it exceeds MCP_KB_FS_AUDIT_LOG_MAX_BYTES (keeps history)', async () => {
     process.env.MCP_KB_FS_AUDIT_LOG_MAX_BYTES = '100'
     process.env.MCP_KB_FS_AUDIT_LOG_KEEP = '2'
@@ -144,6 +176,26 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-fs)', () => {
     await new Promise((r) => setTimeout(r, 50))
     // No `.1` rotation file when KEEP=0.
     await expect(fs.access(`${logPath}.1`)).rejects.toThrow()
+    delete process.env.MCP_KB_FS_AUDIT_LOG_MAX_BYTES
+    delete process.env.MCP_KB_FS_AUDIT_LOG_KEEP
+  })
+
+  it('swallows rotation failures (e.g. destination slot is a non-empty dir) and leaves the live log', async () => {
+    process.env.MCP_KB_FS_AUDIT_LOG_MAX_BYTES = '100'
+    // KEEP=1: the shift loop is empty, so rotation goes straight to
+    // `rename(live → .1)`. Pre-block `.1` with a non-empty directory so that
+    // rename fails with ENOTEMPTY, exercising the rotateIfNeeded catch branch.
+    process.env.MCP_KB_FS_AUDIT_LOG_KEEP = '1'
+    await fs.mkdir(path.dirname(logPath), { recursive: true })
+    await fs.mkdir(`${logPath}.1`, { recursive: true })
+    await fs.writeFile(path.join(`${logPath}.1`, 'blocker'), 'x')
+    const { withAuditLog } = await import('./audit-log.js')
+    const wrapped = withAuditLog('kb_note_write', 'destructive', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    for (let i = 0; i < 6; i++) await wrapped({ idx: i })
+    await new Promise((r) => setTimeout(r, 50))
+    // Rotation failed, so the live log still exists and the blocker dir is intact.
+    await expect(fs.access(logPath)).resolves.toBeUndefined()
+    await expect(fs.access(path.join(`${logPath}.1`, 'blocker'))).resolves.toBeUndefined()
     delete process.env.MCP_KB_FS_AUDIT_LOG_MAX_BYTES
     delete process.env.MCP_KB_FS_AUDIT_LOG_KEEP
   })

@@ -45,10 +45,17 @@ describe('resolveWithinRoot', () => {
 })
 
 describe('errorResult', () => {
-  it('builds the MCP error response shape', () => {
-    expect(errorResult('something went wrong')).toEqual({
+  it('builds the MCP error response shape, prefixing the action', () => {
+    expect(errorResult('reading note', new Error('something went wrong'))).toEqual({
       isError: true,
-      content: [{ type: 'text', text: 'something went wrong' }]
+      content: [{ type: 'text', text: 'Error reading note: something went wrong' }]
+    })
+  })
+
+  it('coerces non-Error values via errMessage', () => {
+    expect(errorResult('writing note', 'plain string')).toEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Error writing note: plain string' }]
     })
   })
 })
