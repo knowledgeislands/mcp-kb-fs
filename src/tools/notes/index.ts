@@ -17,21 +17,27 @@ export const registerNotesTools = (server: McpServer, cfg: Config): void => {
     'kb_note_read',
     {
       title: 'Read KB Note',
-      description: `Read the full markdown content of a Knowledge Base note by its KB-relative path.
+      description: `Read a Knowledge Base note by its KB-relative path — all of it, or just its YAML frontmatter or just its body.
 
 Args:
   - path (string): KB-relative path to the note.
     Example: "CLAUDE.md"
+  - part (string): which slice to return. One of:
+    - "all" (default): the raw markdown of the whole file.
+    - "frontmatter": only the YAML between the leading "---" fences (fences excluded); "(no frontmatter)" when the note has none.
+    - "body": only the markdown after the closing "---" fence (the whole file when there is no frontmatter).
 
 Returns:
-  The raw markdown text of the file.
+  The requested slice of the note as text.
 
 Errors:
   - "File not found" when the path does not exist in the knowledge base.
-  - "Path escapes root" when the path attempts directory traversal.`,
+  - "Path escapes root" when the path attempts directory traversal.
+  - "Malformed frontmatter" when part is "frontmatter"/"body" and the note opens a "---" fence that never closes.`,
       inputSchema: z
         .object({
-          path: notePathArg('KB-relative path to the note, e.g. "Pillars/Finance/Budget.md"')
+          path: notePathArg('KB-relative path to the note, e.g. "Pillars/Finance/Budget.md"'),
+          part: z.enum(['all', 'frontmatter', 'body']).default('all').describe('Which slice to return: whole file (all), just the YAML frontmatter, or just the body.')
         })
         .strict(),
       annotations: READ_ONLY

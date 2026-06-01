@@ -107,6 +107,39 @@ describe('readNote', () => {
     expect((result as { isError?: boolean }).isError).toBe(true)
     expect(result.content[0].text).toContain('Path escapes root')
   })
+
+  const FM_NOTE = '---\ntags:\n  - x\nstatus: current\n---\n# Heading\n\nBody text.\n'
+
+  it('part "frontmatter" returns only the YAML between the fences', async () => {
+    await fs.writeFile(path.join(ROOT_PATH, 'fm.md'), FM_NOTE, 'utf-8')
+    const result = await readNote(cfg, { path: 'fm.md', part: 'frontmatter' })
+    expect(result.content[0].text).toBe('tags:\n  - x\nstatus: current')
+  })
+
+  it('part "body" returns only the markdown after the closing fence', async () => {
+    await fs.writeFile(path.join(ROOT_PATH, 'fm.md'), FM_NOTE, 'utf-8')
+    const result = await readNote(cfg, { path: 'fm.md', part: 'body' })
+    expect(result.content[0].text).toBe('# Heading\n\nBody text.\n')
+  })
+
+  it('part "frontmatter" reports "(no frontmatter)" when the note has none', async () => {
+    await fs.writeFile(path.join(ROOT_PATH, 'plain.md'), '# Just a heading\n', 'utf-8')
+    const result = await readNote(cfg, { path: 'plain.md', part: 'frontmatter' })
+    expect(result.content[0].text).toBe('(no frontmatter)')
+  })
+
+  it('part "body" returns the whole note when there is no frontmatter', async () => {
+    await fs.writeFile(path.join(ROOT_PATH, 'plain.md'), '# Just a heading\n', 'utf-8')
+    const result = await readNote(cfg, { path: 'plain.md', part: 'body' })
+    expect(result.content[0].text).toBe('# Just a heading\n')
+  })
+
+  it('errors when frontmatter is requested but the opening fence never closes', async () => {
+    await fs.writeFile(path.join(ROOT_PATH, 'bad.md'), '---\ntags: x\nno closing fence\n', 'utf-8')
+    const result = await readNote(cfg, { path: 'bad.md', part: 'frontmatter' })
+    expect((result as { isError?: boolean }).isError).toBe(true)
+    expect(result.content[0].text).toContain('Malformed frontmatter in "bad.md"')
+  })
 })
 
 describe('listNotes', () => {

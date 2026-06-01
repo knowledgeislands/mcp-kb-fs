@@ -22,7 +22,28 @@ const isNote = (basename: string): boolean => basename.endsWith(NOTE_EXT)
 
 const relativeFromRoot = (rootPath: string, absPath: string): string => path.relative(rootPath, absPath)
 
-export const readNote = async (cfg: Config, { path: notePath }: { path: string }) => {
+const textResult = (text: string) => ({ content: [{ type: 'text' as const, text }] })
+
+// Which slice of a note `readNote` returns.
+export type NotePart = 'all' | 'frontmatter' | 'body'
+
+// Split a note into its YAML frontmatter (the lines between the leading `---`
+// fences, fences excluded) and the body after the closing fence. `frontmatter`
+// is null when the note has no leading `---` fence; `malformed` is true when it
+// opens a fence that never closes (mirrors the kb checker's well-formedness rule).
+type FrontmatterSplit = { frontmatter: string | null; body: string; malformed: boolean }
+const splitFrontmatter = (content: string): FrontmatterSplit => {
+  const lines = content.split('\n')
+  if (lines[0]?.trim() !== '---') return { frontmatter: null, body: content, malformed: false }
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i]?.trim() === '---') {
+      return { frontmatter: lines.slice(1, i).join('\n'), body: lines.slice(i + 1).join('\n'), malformed: false }
+    }
+  }
+  return { frontmatter: null, body: content, malformed: true }
+}
+
+export const readNote = async (cfg: Config, { path: notePath, part = 'all' }: { path: string; part?: NotePart }) => {
   if (!isNote(notePath)) {
     return errorResult('reading note', new Error(`Notes must end in "${NOTE_EXT}": "${notePath}"`))
   }
@@ -37,7 +58,13 @@ export const readNote = async (cfg: Config, { path: notePath }: { path: string }
       return errorResult('reading note', new Error(`Not a note file: "${notePath}"`))
     }
     const content = await fs.readFile(absPath, 'utf-8')
-    return { content: [{ type: 'text' as const, text: content }] }
+    if (part === 'all') return textResult(content)
+    const split = splitFrontmatter(content)
+    if (split.malformed) {
+      return errorResult('reading note', new Error(`Malformed frontmatter in "${notePath}": opening "---" has no closing "---"`))
+    }
+    if (part === 'frontmatter') return textResult(split.frontmatter === null ? '(no frontmatter)' : split.frontmatter)
+    return textResult(split.body)
   } catch (err) {
     if (isNodeError(err) && err.code === 'ENOENT') {
       return errorResult('reading note', new Error(`File not found: "${notePath}" (root: ${cfg.rootPath})`))
