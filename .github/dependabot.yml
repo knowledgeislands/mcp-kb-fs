@@ -1,6 +1,19 @@
 version: 2
 updates:
+  # TEST (mcp-kb-fs only): both npm and bun ecosystems, to compare. These repos are
+  # Bun projects (bun.lock, no package-lock.json). The `npm` updater bumps package.json
+  # but does NOT touch bun.lock (lockfile drift in its PRs); the `bun` updater (Bun
+  # >= 1.1.39) updates package.json AND bun.lock. Both target "/", so both can open a
+  # PR for the same dependency — watch for duplicate PRs here before rolling out.
+  # NOTE: security-update PRs come from the repo-level "Dependabot security updates"
+  # setting + the dependency graph, NOT from these version-update entries — so dropping
+  # `npm` here would not lose security coverage.
   - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: bun
     directory: /
     schedule:
       interval: weekly
