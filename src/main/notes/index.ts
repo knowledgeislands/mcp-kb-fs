@@ -67,7 +67,7 @@ export const readNote = async (cfg: Config, { path: notePath, part = 'all' }: { 
     return textResult(split.body)
   } catch (err) {
     if (isNodeError(err) && err.code === 'ENOENT') {
-      return errorResult('reading note', new Error(`File not found: "${notePath}" (root: ${cfg.rootPath})`))
+      return errorResult('reading note', new Error(`File not found: "${notePath}"`))
     }
     return errorResult('reading note', err)
   }
@@ -164,7 +164,7 @@ export const renameNote = async (cfg: Config, { from, to, create_dirs }: { from:
     }
   } catch (err) {
     if (isNodeError(err) && err.code === 'ENOENT') {
-      return errorResult('renaming note', new Error(`File not found: "${from}" (root: ${cfg.rootPath}) — or destination parent missing for "${to}" (set create_dirs: true)`))
+      return errorResult('renaming note', new Error(`File not found: "${from}" — or destination parent missing for "${to}" (set create_dirs: true)`))
     }
     return errorResult('renaming note', err)
   }
@@ -205,7 +205,7 @@ export const deleteNote = async (cfg: Config, { path: notePath, dry_run }: { pat
     }
   } catch (err) {
     if (isNodeError(err) && err.code === 'ENOENT') {
-      return errorResult('deleting note', new Error(`File not found: "${notePath}" (root: ${cfg.rootPath})`))
+      return errorResult('deleting note', new Error(`File not found: "${notePath}"`))
     }
     return errorResult('deleting note', err)
   }

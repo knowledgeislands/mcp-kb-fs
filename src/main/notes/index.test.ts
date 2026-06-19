@@ -99,7 +99,7 @@ describe('readNote', () => {
     const result = await readNote(cfg, { path: 'missing.md' })
     expect((result as { isError?: boolean }).isError).toBe(true)
     expect(result.content[0].text).toContain('File not found: "missing.md"')
-    expect(result.content[0].text).toContain(`(root: ${ROOT_PATH})`)
+    expect(result.content[0].text).not.toContain(ROOT_PATH)
   })
 
   it('rejects path traversal', async () => {
