@@ -27,7 +27,20 @@ describe('isProtectedPath', () => {
   })
 
   it('protects root-level meta basenames (case-insensitive, with optional .md)', () => {
-    for (const name of ['README', 'README.md', 'readme.md', 'CLAUDE.md', 'claude', 'LICENSE', 'LICENSE.txt', 'CHANGELOG.md', 'CONTRIBUTING.md', 'SECURITY.md', 'CODE_OF_CONDUCT.md', 'AGENTS.md']) {
+    for (const name of [
+      'README',
+      'README.md',
+      'readme.md',
+      'CLAUDE.md',
+      'claude',
+      'LICENSE',
+      'LICENSE.txt',
+      'CHANGELOG.md',
+      'CONTRIBUTING.md',
+      'SECURITY.md',
+      'CODE_OF_CONDUCT.md',
+      'AGENTS.md'
+    ]) {
       expect(isProtectedPath(name)).toBe(true)
     }
   })

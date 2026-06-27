@@ -5,7 +5,7 @@
 // in-process registration call pattern; this covers the actual protocol round-trip).
 //
 // Run via `bun run test:smoke` (builds dist/ first). Runs in CI without secrets:
-// the only required env var is MCP_KB_FS_ROOT_PATH, which we point at the OS
+// the only required env var is MCP_KI_KB_FS_ROOT_PATH, which we point at the OS
 // temp dir so config validation passes and the server can access the root.
 
 import * as os from 'node:os'
@@ -15,13 +15,19 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 // Single source of truth for the tool surface — kept in sync with the
 // registration in `src/tools/notes/index.ts`. If you add a tool, update both.
 const EXPECTED_TOOLS = [
-  'kb_note_read',
-  'kb_notes_list',
-  'kb_folders_list',
-  'kb_note_write',
-  'kb_note_rename',
+  'kb_config',
+  'kb_file_delete',
+  'kb_file_read',
+  'kb_file_rename',
+  'kb_file_write',
+  'kb_files_list',
   'kb_folder_create',
-  'kb_note_delete'
+  'kb_folders_list',
+  'kb_note_delete',
+  'kb_note_read',
+  'kb_note_rename',
+  'kb_note_write',
+  'kb_notes_list'
 ] as const
 
 const die = (msg: string, detail?: unknown): never => {
@@ -36,13 +42,13 @@ const main = async (): Promise<void> => {
     args: ['dist/mcp-server/index.js'],
     // Raise the access level to `destructive` so the smoke test sees the full
     // surface; the server's default (read only) would otherwise hide every
-    // mutating kb_* tool. MCP_KB_FS_ROOT_PATH points at the OS temp dir — an
+    // mutating kb_* tool. MCP_KI_KB_FS_ROOT_PATH points at the OS temp dir — an
     // existing, accessible directory — so config validation and the startup
     // access check both pass without any real knowledge base on disk.
     env: {
       ...(process.env as Record<string, string>),
-      MCP_KB_FS_ACCESS_LEVEL: 'destructive',
-      MCP_KB_FS_ROOT_PATH: os.tmpdir()
+      MCP_KI_KB_FS_ACCESS_LEVEL: 'destructive',
+      MCP_KI_KB_FS_ROOT_PATH: os.tmpdir()
     }
   })
   const client = new Client({ name: 'mcp-kb-fs-smoke', version: '0.0.0' }, { capabilities: {} })

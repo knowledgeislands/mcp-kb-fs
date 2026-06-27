@@ -155,23 +155,25 @@ const loadKiConfig = (rootPath: string): { zones: ResolvedZones; kiConfigRaw: st
   try {
     parsed = parseToml(raw) as Record<string, unknown>
   } catch (err) {
+    // smol-toml always throws an Error instance; String(err) is a defensive fallback.
+    /* v8 ignore next */
     throw new Error(`.ki-config.toml parse error: ${err instanceof Error ? err.message : String(err)}`)
   }
 
   const kb = (parsed['knowledgeislands-kb'] ?? {}) as Record<string, unknown>
-  const declared = (kb['zones'] ?? {}) as Record<string, unknown>
+  const declared = (kb.zones ?? {}) as Record<string, unknown>
 
   const str = (v: unknown, fallback: string): string => (typeof v === 'string' && v.trim() ? v.trim() : fallback)
 
   return {
     zones: {
-      Calendar: str(declared['Calendar'], DEFAULT_ZONES.Calendar),
-      Pillars: str(declared['Pillars'], DEFAULT_ZONES.Pillars),
-      Resources: str(declared['Resources'], DEFAULT_ZONES.Resources),
-      Streams: str(declared['Streams'], DEFAULT_ZONES.Streams),
-      Admin: str(declared['Admin'], DEFAULT_ZONES.Admin),
-      inbound: str(declared['inbound'], DEFAULT_ZONES.inbound),
-      outbound: str(declared['outbound'], DEFAULT_ZONES.outbound)
+      Calendar: str(declared.Calendar, DEFAULT_ZONES.Calendar),
+      Pillars: str(declared.Pillars, DEFAULT_ZONES.Pillars),
+      Resources: str(declared.Resources, DEFAULT_ZONES.Resources),
+      Streams: str(declared.Streams, DEFAULT_ZONES.Streams),
+      Admin: str(declared.Admin, DEFAULT_ZONES.Admin),
+      inbound: str(declared.inbound, DEFAULT_ZONES.inbound),
+      outbound: str(declared.outbound, DEFAULT_ZONES.outbound)
     },
     kiConfigRaw: raw
   }

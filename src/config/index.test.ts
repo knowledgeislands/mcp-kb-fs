@@ -3,10 +3,22 @@
  * (no process.env mutation, no module-reset dance). MCP_KI_KB_FS_ROOT_PATH is
  * required, so every load supplies it unless the test is asserting the guard.
  */
+import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { isInScope, outOfScopeError } from '../utils/zones.js'
 import { loadConfig } from './index.js'
+
+const TOML_ROOT = path.join(os.tmpdir(), 'knowledgeislands-tests', `config-toml-${process.pid}`)
+
+beforeAll(() => {
+  fs.mkdirSync(TOML_ROOT, { recursive: true })
+})
+
+afterAll(() => {
+  fs.rmSync(TOML_ROOT, { recursive: true, force: true })
+})
 
 const load = (extra: Record<string, string> = {}) => loadConfig({ MCP_KI_KB_FS_ROOT_PATH: '/tmp/explicit-kb', ...extra })
 
@@ -104,5 +116,97 @@ describe('loadConfig', () => {
         else process.env.NODE_ENV = original
       }
     })
+  })
+
+  describe('loadKiConfig — .ki-config.toml handling', () => {
+    it('uses zone overrides from a valid .ki-config.toml', () => {
+      const toml = '[knowledgeislands-kb]\n[knowledgeislands-kb.zones]\nCalendar = "Cal"\n'
+      fs.writeFileSync(path.join(TOML_ROOT, '.ki-config.toml'), toml, 'utf-8')
+      const cfg = loadConfig({ MCP_KI_KB_FS_ROOT_PATH: TOML_ROOT })
+      expect(cfg.zones.Calendar).toBe('Cal')
+      expect(cfg.zones.Pillars).toBe('Pillars') // default
+      expect(cfg.kiConfigRaw).toBe(toml)
+      fs.rmSync(path.join(TOML_ROOT, '.ki-config.toml'))
+    })
+
+    it('throws on a malformed .ki-config.toml (TOML parse error branch, lines 155-161)', () => {
+      fs.writeFileSync(path.join(TOML_ROOT, '.ki-config.toml'), '[[invalid\n', 'utf-8')
+      expect(() => loadConfig({ MCP_KI_KB_FS_ROOT_PATH: TOML_ROOT })).toThrow(/.ki-config.toml parse error/)
+      fs.rmSync(path.join(TOML_ROOT, '.ki-config.toml'))
+    })
+
+    it('falls back to defaults when .ki-config.toml is absent', () => {
+      const cfg = loadConfig({ MCP_KI_KB_FS_ROOT_PATH: TOML_ROOT })
+      expect(cfg.zones.Calendar).toBe('Calendar')
+      expect(cfg.kiConfigRaw).toBeNull()
+    })
+
+    it('uses default zone name when override is an empty string (str() fallback branch)', () => {
+      // An empty-string zone value should fall through to the default (str() returns fallback).
+      const toml = '[knowledgeislands-kb]\n[knowledgeislands-kb.zones]\nCalendar = ""\n'
+      fs.writeFileSync(path.join(TOML_ROOT, '.ki-config.toml'), toml, 'utf-8')
+      const cfg = loadConfig({ MCP_KI_KB_FS_ROOT_PATH: TOML_ROOT })
+      expect(cfg.zones.Calendar).toBe('Calendar') // empty string → fallback
+      fs.rmSync(path.join(TOML_ROOT, '.ki-config.toml'))
+    })
+
+    it('uses default zone name when override is a non-string (str() typeof branch)', () => {
+      // A TOML integer value for a zone key should fall through to the default.
+      const toml = '[knowledgeislands-kb]\n[knowledgeislands-kb.zones]\nCalendar = 42\n'
+      fs.writeFileSync(path.join(TOML_ROOT, '.ki-config.toml'), toml, 'utf-8')
+      const cfg = loadConfig({ MCP_KI_KB_FS_ROOT_PATH: TOML_ROOT })
+      expect(cfg.zones.Calendar).toBe('Calendar') // non-string → fallback
+      fs.rmSync(path.join(TOML_ROOT, '.ki-config.toml'))
+    })
+
+    it('uses all defaults when .ki-config.toml has no [knowledgeislands-kb] section (line 163 ?? branch)', () => {
+      // No [knowledgeislands-kb] table → parsed['knowledgeislands-kb'] is undefined → ?? {} fires.
+      const toml = '[other-section]\nfoo = "bar"\n'
+      fs.writeFileSync(path.join(TOML_ROOT, '.ki-config.toml'), toml, 'utf-8')
+      const cfg = loadConfig({ MCP_KI_KB_FS_ROOT_PATH: TOML_ROOT })
+      expect(cfg.zones.Calendar).toBe('Calendar')
+      expect(cfg.zones.Pillars).toBe('Pillars')
+      fs.rmSync(path.join(TOML_ROOT, '.ki-config.toml'))
+    })
+
+    it('uses all defaults when [knowledgeislands-kb] has no zones key (line 164 ?? branch)', () => {
+      // [knowledgeislands-kb] section exists but has no zones sub-table → kb.zones is undefined → ?? {} fires.
+      const toml = '[knowledgeislands-kb]\nsome_key = "value"\n'
+      fs.writeFileSync(path.join(TOML_ROOT, '.ki-config.toml'), toml, 'utf-8')
+      const cfg = loadConfig({ MCP_KI_KB_FS_ROOT_PATH: TOML_ROOT })
+      expect(cfg.zones.Calendar).toBe('Calendar')
+      fs.rmSync(path.join(TOML_ROOT, '.ki-config.toml'))
+    })
+  })
+})
+
+describe('zones helpers', () => {
+  const zones = {
+    Calendar: 'Calendar',
+    Pillars: 'Pillars',
+    Resources: 'Resources',
+    Streams: 'Streams',
+    Admin: 'Admin',
+    inbound: '+',
+    outbound: '-'
+  }
+
+  it('isInScope returns false for an empty string (line 12 branch)', () => {
+    expect(isInScope('', zones)).toBe(false)
+  })
+
+  it('isInScope returns true for a path inside a zone', () => {
+    expect(isInScope('Pillars/note.md', zones)).toBe(true)
+  })
+
+  it('isInScope returns false for a path outside all zones', () => {
+    expect(isInScope('UnknownZone/note.md', zones)).toBe(false)
+  })
+
+  it('outOfScopeError lists all zone names', () => {
+    const msg = outOfScopeError(zones)
+    expect(msg).toContain('Calendar')
+    expect(msg).toContain('Pillars')
+    expect(msg).toContain('+')
   })
 })

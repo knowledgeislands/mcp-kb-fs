@@ -16,7 +16,7 @@ import type { Config } from '../../config/index.js'
 import { isProtectedPath } from '../../utils/protected.js'
 import { assertRealPathWithinRoot, errorResult, isNodeError, jsonResult, resolveWithinRoot } from '../../utils/utils.js'
 import { isInScope, outOfScopeError } from '../../utils/zones.js'
-import { collectFiles, collectFolders, relativeFromRoot } from '../shared.js'
+import { collectFiles, relativeFromRoot } from '../shared.js'
 
 // Minimal extension → MIME map for the most common KB side-file types.
 // Falls back to application/octet-stream for anything unrecognised.
@@ -47,6 +47,8 @@ const isUtf8 = (buf: Buffer): boolean => {
     const decoded = buf.toString('utf-8')
     return Buffer.from(decoded, 'utf-8').equals(buf)
   } catch {
+    // buf.toString() does not throw in Node.js; this is a defensive fallback.
+    /* v8 ignore next */
     return false
   }
 }
@@ -96,25 +98,6 @@ export const listFiles = async (cfg: Config, { path: dirPath, recursive, ext }: 
     return jsonResult({ path: dirPath, recursive, ext: ext ?? null, count: relative.length, files: relative })
   } catch (err) {
     return errorResult('listing files', err)
-  }
-}
-
-export const listFilesFolders = async (cfg: Config, { path: dirPath, recursive }: { path: string; recursive: boolean }) => {
-  try {
-    const absDir = resolveWithinRoot(cfg.rootPath, dirPath)
-    const rel = relativeFromRoot(cfg.rootPath, absDir)
-    if (rel && !isInScope(rel, cfg.zones)) {
-      return errorResult('listing folders', new Error(outOfScopeError(cfg.zones)))
-    }
-    if (isProtectedPath(rel)) {
-      return errorResult('listing folders', new Error(`Path is protected: "${dirPath}"`))
-    }
-    await assertRealPathWithinRoot(cfg.rootPath, absDir)
-    const folders = await collectFolders(cfg.rootPath, absDir, recursive)
-    const relative = folders.map((p) => path.relative(cfg.rootPath, p))
-    return jsonResult({ path: dirPath, recursive, count: relative.length, folders: relative })
-  } catch (err) {
-    return errorResult('listing folders', err)
   }
 }
 

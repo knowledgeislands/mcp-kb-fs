@@ -8,8 +8,10 @@ import { DESTRUCTIVE, READ_ONLY, WRITE, WRITE_IDEMPOTENT } from '../../utils/ann
 // two-layer guard (lexical + realpath). Rejects "..", absolute, and "~"-rooted
 // inputs before they reach the filesystem; "/" separators (subfolders) stay valid.
 const NO_TRAVERSAL_MSG = 'Path must be KB-relative: no ".." segments, leading "/", or "~" prefix'
-const isKbRelative = (p: string): boolean => !p.split(/[\\/]/).includes('..') && !p.startsWith('/') && !p.startsWith('~') && !p.includes('\0')
-const notePathArg = (describe: string) => z.string().min(1, 'Path must not be empty').max(4096).refine(isKbRelative, NO_TRAVERSAL_MSG).describe(describe)
+const isKbRelative = (p: string): boolean =>
+  !p.split(/[\\/]/).includes('..') && !p.startsWith('/') && !p.startsWith('~') && !p.includes('\0')
+const notePathArg = (describe: string) =>
+  z.string().min(1, 'Path must not be empty').max(4096).refine(isKbRelative, NO_TRAVERSAL_MSG).describe(describe)
 const dirPathArg = (describe: string) => z.string().max(4096).refine(isKbRelative, NO_TRAVERSAL_MSG).default('').describe(describe)
 
 export const registerNotesTools = (server: McpServer, cfg: Config): void => {
@@ -37,7 +39,10 @@ Errors:
       inputSchema: z
         .object({
           path: notePathArg('KB-relative path to the note, e.g. "Pillars/Finance/Budget.md"'),
-          part: z.enum(['all', 'frontmatter', 'body']).default('all').describe('Which slice to return: whole file (all), just the YAML frontmatter, or just the body.')
+          part: z
+            .enum(['all', 'frontmatter', 'body'])
+            .default('all')
+            .describe('Which slice to return: whole file (all), just the YAML frontmatter, or just the body.')
         })
         .strict(),
       annotations: READ_ONLY
@@ -150,7 +155,10 @@ Errors:
         .object({
           from: notePathArg('Current KB-relative path of the note, e.g. "Inbox/draft.md"'),
           to: notePathArg('New KB-relative path for the note, e.g. "Pillars/Finance/Budget.md"'),
-          create_dirs: z.boolean().default(true).describe('Create parent directories of the destination if they do not exist. Default true.')
+          create_dirs: z
+            .boolean()
+            .default(true)
+            .describe('Create parent directories of the destination if they do not exist. Default true.')
         })
         .strict(),
       annotations: WRITE

@@ -23,7 +23,7 @@ Every file path is validated against the configured root, so the server cannot r
 
 Tools follow the convention `<app>_<resource>_<action>`. Each tool declares an annotation preset (`READ_ONLY`, `WRITE`, `WRITE_IDEMPOTENT`,
 `DESTRUCTIVE`) which determines its access level (`read`, `write`, or `destructive`) via the underlying MCP hints (`readOnlyHint` /
-`destructiveHint`). The registered surface is controlled by the `MCP_KB_FS_ACCESS_LEVEL` env var (defaults to `read`; levels nest). Tools
+`destructiveHint`). The registered surface is controlled by the `MCP_KI_KB_FS_ACCESS_LEVEL` env var (defaults to `read`; levels nest). Tools
 above the configured level are silently skipped at registration.
 
 | Tool               | Level         | Preset             | Description                                          |
@@ -144,7 +144,7 @@ Fails with `Path exists as a file, not a folder` if a regular file already occup
 1. **Install dependencies**: `bun install`
 2. **Pick a knowledge base directory** — any folder of markdown files (can be empty).
 3. **Build**: `bun run build`
-4. **Configure Claude Desktop** with the path to `dist/mcp-server/index.js` and your `MCP_KB_FS_ROOT_PATH` (see
+4. **Configure Claude Desktop** with the path to `dist/mcp-server/index.js` and your `MCP_KI_KB_FS_ROOT_PATH` (see
    [Configuration](#configuration)).
 5. **Restart Claude Desktop** — the enabled `kb_*` tools should appear (defaults to read-only).
 
@@ -172,7 +172,7 @@ protected pattern (dotfile, root-level repo-meta), the tool returns a clear erro
 
 Claude calls [`kb_note_write`](#kb_note_write) with the markdown content and `create_dirs: true` (the default). The path goes through both
 the lexical and `realpath` safety checks before any byte is written. `kb_note_write` is annotated `DESTRUCTIVE` (it can overwrite an
-existing note), so `MCP_KB_FS_ACCESS_LEVEL=destructive` is required for it to register.
+existing note), so `MCP_KI_KB_FS_ACCESS_LEVEL=destructive` is required for it to register.
 
 **Discover structure:**
 
@@ -198,15 +198,15 @@ bun install
 
 ### Environment Variables
 
-| Name                            | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MCP_KB_FS_ROOT_PATH`           | yes      | Absolute path or `~/...` to the knowledge base root. The server asserts on startup.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `MCP_KB_FS_ACCESS_LEVEL`        | no       | Maximum tool access level to register. One of: `read` (default — read-only tools only, least privilege), `write` (adds non-destructive mutations: `kb_note_rename`, `kb_folder_create`), `destructive` (adds overwrite/delete: `kb_note_write`, `kb_note_delete`). Levels nest. Each tool's level is derived from its MCP annotations (`readOnlyHint: true` → `read`; `destructiveHint: true` → `destructive`; explicit `readOnlyHint: false` AND `destructiveHint: false` → `write`; missing annotations → `destructive` fail-safe); a tool registers when its derived level ≤ the configured level. The `dry_run: true` default on destructive tools controls _effect_; this gate controls _visibility_. An unknown value aborts startup. |
-| `MCP_KB_FS_AUDIT_LOG`           | no       | Audit-log scope. One of `off`, `writes` (default — record only non-read tool calls), `all` (record every invocation).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `MCP_KB_FS_AUDIT_LOG_PATH`      | no       | Path to the JSONL audit log. Default `~/.local/state/mcp-kb-fs/audit.jsonl`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `MCP_KB_FS_AUDIT_LOG_MAX_BYTES` | no       | Size-based rotation threshold in bytes. Default `10485760` (10 MiB). Set to `0` to disable rotation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `MCP_KB_FS_AUDIT_LOG_KEEP`      | no       | Number of rotated audit-log files to retain. Default `5`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `NODE_ENV`                      | no       | Dev convention. `loadConfig()` in [`src/config/index.ts`](./src/config/index.ts) hydrates `process.env`, from the package root and highest precedence first, from `.env.local`, then `.env.${NODE_ENV}` (when set), then `.env`; a var already in the environment (e.g. the MCP client's `env` block) always wins. `server:mcp:dev`/`server:mcp:inspect` set this to `development` so `.env.development` is picked up; under Claude Desktop it is unset, so only `.env.local`/`.env` would apply.                                                                                                                                                                                                                                           |
+| Name                               | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MCP_KI_KB_FS_ROOT_PATH`           | yes      | Absolute path or `~/...` to the knowledge base root. The server asserts on startup.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `MCP_KI_KB_FS_ACCESS_LEVEL`        | no       | Maximum tool access level to register. One of: `read` (default — read-only tools only, least privilege), `write` (adds non-destructive mutations: `kb_note_rename`, `kb_folder_create`), `destructive` (adds overwrite/delete: `kb_note_write`, `kb_note_delete`). Levels nest. Each tool's level is derived from its MCP annotations (`readOnlyHint: true` → `read`; `destructiveHint: true` → `destructive`; explicit `readOnlyHint: false` AND `destructiveHint: false` → `write`; missing annotations → `destructive` fail-safe); a tool registers when its derived level ≤ the configured level. The `dry_run: true` default on destructive tools controls _effect_; this gate controls _visibility_. An unknown value aborts startup. |
+| `MCP_KI_KB_FS_AUDIT_LOG`           | no       | Audit-log scope. One of `off`, `writes` (default — record only non-read tool calls), `all` (record every invocation).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `MCP_KI_KB_FS_AUDIT_LOG_PATH`      | no       | Path to the JSONL audit log. Default `~/.local/state/mcp-kb-fs/audit.jsonl`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `MCP_KI_KB_FS_AUDIT_LOG_MAX_BYTES` | no       | Size-based rotation threshold in bytes. Default `10485760` (10 MiB). Set to `0` to disable rotation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `MCP_KI_KB_FS_AUDIT_LOG_KEEP`      | no       | Number of rotated audit-log files to retain. Default `5`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `NODE_ENV`                         | no       | Dev convention. `loadConfig()` in [`src/config/index.ts`](./src/config/index.ts) hydrates `process.env`, from the package root and highest precedence first, from `.env.local`, then `.env.${NODE_ENV}` (when set), then `.env`; a var already in the environment (e.g. the MCP client's `env` block) always wins. `server:mcp:dev`/`server:mcp:inspect` set this to `development` so `.env.development` is picked up; under Claude Desktop it is unset, so only `.env.local`/`.env` would apply.                                                                                                                                                                                                                                           |
 
 ### Claude Desktop Configuration
 
@@ -219,7 +219,7 @@ Run `bun run build` first so `dist/mcp-server/index.js` exists, then add to your
       "command": "node",
       "args": ["/path/to/mcp-kb-fs/dist/mcp-server/index.js"],
       "env": {
-        "MCP_KB_FS_ROOT_PATH": "/path/to/your/kb"
+        "MCP_KI_KB_FS_ROOT_PATH": "/path/to/your/kb"
       }
     }
   }
@@ -233,14 +233,14 @@ A starter is in [`claude-config-sample.json`](./claude-config-sample.json).
 For fast iteration without rebuilding:
 
 ```bash
-MCP_KB_FS_ROOT_PATH=~/notes bun run server:mcp:dev
+MCP_KI_KB_FS_ROOT_PATH=~/notes bun run server:mcp:dev
 ```
 
 This runs `src/mcp-server/index.ts` under `bun --watch`. Point Claude Desktop at this command during development if you want live reload.
 
-Alternatively, copy [`.env.example`](./.env.example) to `.env.development` (or `.env.local`) and set `MCP_KB_FS_ROOT_PATH` there. At startup
-`loadConfig()` in [`src/config/index.ts`](./src/config/index.ts) hydrates `process.env` from the package root, highest precedence first:
-`.env.local`, then `.env.${NODE_ENV}` (when set), then `.env`. The `server:mcp:dev`/`server:mcp:inspect` scripts run with
+Alternatively, copy [`.env.example`](./.env.example) to `.env.development` (or `.env.local`) and set `MCP_KI_KB_FS_ROOT_PATH` there. At
+startup `loadConfig()` in [`src/config/index.ts`](./src/config/index.ts) hydrates `process.env` from the package root, highest precedence
+first: `.env.local`, then `.env.${NODE_ENV}` (when set), then `.env`. The `server:mcp:dev`/`server:mcp:inspect` scripts run with
 `NODE_ENV=development`, so `.env.development` is picked up; Claude Desktop does not set `NODE_ENV`, so only `.env.local`/`.env` would apply.
 A var already present in the environment (e.g. the Desktop config `env` block) always beats any file.
 
@@ -259,8 +259,8 @@ bun run lint:md             # prettier + markdownlint for *.md
 
 ## Security Model
 
-- The root is resolved at startup from `MCP_KB_FS_ROOT_PATH` by `loadConfig()` into `config.rootPath`, then threaded into every tool. `~` is
-  expanded to the user home directory.
+- The root is resolved at startup from `MCP_KI_KB_FS_ROOT_PATH` by `loadConfig()` into `config.rootPath`, then threaded into every tool. `~`
+  is expanded to the user home directory.
 - Every tool input goes through two checks before any FS access:
   1. **Lexical** — `resolveWithinRoot()` normalises separators, strips leading slashes, then asserts the resolved absolute path is strictly
      inside the root. Inputs that resolve outside via `..` or absolute-style paths are rejected with `Path escapes root: "<input>"`.
@@ -303,20 +303,20 @@ bun run lint:md             # prettier + markdownlint for *.md
 
 ## Troubleshooting
 
-**`MCP_KB_FS_ROOT_PATH environment variable must be set`**
+**`MCP_KI_KB_FS_ROOT_PATH environment variable must be set`**
 
-The server aborts at startup if `MCP_KB_FS_ROOT_PATH` is missing. Set it in the Claude Desktop config `env` block, or as a shell variable
+The server aborts at startup if `MCP_KI_KB_FS_ROOT_PATH` is missing. Set it in the Claude Desktop config `env` block, or as a shell variable
 for `bun run server:mcp:dev`.
 
-**`MCP_KB_FS_ROOT_PATH not accessible: <path>`**
+**`MCP_KI_KB_FS_ROOT_PATH not accessible: <path>`**
 
-`MCP_KB_FS_ROOT_PATH` was set but the path doesn't exist or isn't readable. Verify the path, and check that `~` was expanded as you expected
-(the server expands a leading `~/` itself).
+`MCP_KI_KB_FS_ROOT_PATH` was set but the path doesn't exist or isn't readable. Verify the path, and check that `~` was expanded as you
+expected (the server expands a leading `~/` itself).
 
 **Tool returns `Path escapes root`**
 
 The requested path resolves outside the root, either lexically (`..`/absolute) or via a symlink whose target sits outside
-`MCP_KB_FS_ROOT_PATH`. Use KB-relative paths and check any symlinks inside the KB.
+`MCP_KI_KB_FS_ROOT_PATH`. Use KB-relative paths and check any symlinks inside the KB.
 
 **Tool returns `Path is protected`**
 

@@ -13,7 +13,7 @@ launches.
   [src/config/index.ts](./src/config/index.ts). The try/catch swallows the `TypeError` Bun raises (no `process.loadEnvFile`), so the same
   code works under both.
 - `NODE_ENV` is set to `development` only by `server:mcp:dev` and `server:mcp:inspect`. Claude Desktop doesn't set it, so `.env.*` is
-  ignored in production — `MCP_KB_FS_ROOT_PATH` must come from the Claude Desktop config `env` block.
+  ignored in production — `MCP_KI_KB_FS_ROOT_PATH` must come from the Claude Desktop config `env` block.
 
 Run `bun run` with no args for the full script list.
 
@@ -58,14 +58,14 @@ register each tool, based on `config.annotations`:
 - explicit `readOnlyHint: false` AND `destructiveHint: false` → `write` (non-destructive mutation)
 - anything else (unannotated / partially annotated) → `destructive` (fail-safe)
 
-A tool registers when its derived level is at or below `cfg.accessLevel` (from `MCP_KB_FS_ACCESS_LEVEL`, default: `read`). Levels nest:
+A tool registers when its derived level is at or below `cfg.accessLevel` (from `MCP_KI_KB_FS_ACCESS_LEVEL`, default: `read`). Levels nest:
 `read` registers only readers; `write` adds non-destructive mutations (rename, mkdir); `destructive` adds the rest (overwrite, delete). New
 tools MUST set `annotations` to one of the presets in [src/utils/annotations.ts](./src/utils/annotations.ts): `READ_ONLY`,
 `WRITE`/`WRITE_IDEMPOTENT` (write tier — non-idempotent vs. retry-safe), or `DESTRUCTIVE`. Do not bypass the proxy.
 
 ## Security Requirements
 
-This server reads and writes files anywhere under `MCP_KB_FS_ROOT_PATH`. New tools and changes to existing tools MUST preserve every
+This server reads and writes files anywhere under `MCP_KI_KB_FS_ROOT_PATH`. New tools and changes to existing tools MUST preserve every
 invariant below.
 
 1. **Two-layer path containment, every call site.** Before any `fs.*` call, run user input through **both** `resolveWithinRoot()` (lexical
