@@ -206,7 +206,7 @@ bun install
 | `MCP_KI_KB_FS_AUDIT_LOG_PATH`      | no       | Path to the JSONL audit log. Default `~/.local/state/mcp-kb-fs/audit.jsonl`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `MCP_KI_KB_FS_AUDIT_LOG_MAX_BYTES` | no       | Size-based rotation threshold in bytes. Default `10485760` (10 MiB). Set to `0` to disable rotation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `MCP_KI_KB_FS_AUDIT_LOG_KEEP`      | no       | Number of rotated audit-log files to retain. Default `5`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `NODE_ENV`                         | no       | Dev convention. `loadConfig()` in [`src/config/index.ts`](./src/config/index.ts) hydrates `process.env`, from the package root and highest precedence first, from `.env.local`, then `.env.${NODE_ENV}` (when set), then `.env`; a var already in the environment (e.g. the MCP client's `env` block) always wins. `server:mcp:dev`/`server:mcp:inspect` set this to `development` so `.env.development` is picked up; under Claude Desktop it is unset, so only `.env.local`/`.env` would apply.                                                                                                                                                                                                                                           |
+| `NODE_ENV`                         | no       | Dev convention. `loadConfig()` in [`src/config/index.ts`](./src/config/index.ts) hydrates `process.env`, from the package root and highest precedence first, from `.env.local`, then `.env.${NODE_ENV}` (when set), then `.env`; a var already in the environment (e.g. the MCP client's `env` block) always wins. `ki:server:mcp:dev`/`ki:server:mcp:inspect` set this to `development` so `.env.development` is picked up; under Claude Desktop it is unset, so only `.env.local`/`.env` would apply.                                                                                                                                                                                                                                     |
 
 ### Claude Desktop Configuration
 
@@ -233,28 +233,28 @@ A starter is in [`claude-config-sample.json`](./claude-config-sample.json).
 For fast iteration without rebuilding:
 
 ```bash
-MCP_KI_KB_FS_ROOT_PATH=~/notes bun run server:mcp:dev
+MCP_KI_KB_FS_ROOT_PATH=~/notes bun run ki:server:mcp:dev
 ```
 
 This runs `src/mcp-server/index.ts` under `bun --watch`. Point Claude Desktop at this command during development if you want live reload.
 
 Alternatively, copy [`.env.example`](./.env.example) to `.env.development` (or `.env.local`) and set `MCP_KI_KB_FS_ROOT_PATH` there. At
 startup `loadConfig()` in [`src/config/index.ts`](./src/config/index.ts) hydrates `process.env` from the package root, highest precedence
-first: `.env.local`, then `.env.${NODE_ENV}` (when set), then `.env`. The `server:mcp:dev`/`server:mcp:inspect` scripts run with
+first: `.env.local`, then `.env.${NODE_ENV}` (when set), then `.env`. The `ki:server:mcp:dev`/`ki:server:mcp:inspect` scripts run with
 `NODE_ENV=development`, so `.env.development` is picked up; Claude Desktop does not set `NODE_ENV`, so only `.env.local`/`.env` would apply.
 A var already present in the environment (e.g. the Desktop config `env` block) always beats any file.
 
 ## Development
 
 ```bash
-bun run server:mcp:dev      # bun --watch mode (NODE_ENV=development)
-bun run server:mcp:start    # build then run from dist/ under node
-bun run server:mcp:inspect  # MCP Inspector against TS source (NODE_ENV=development)
+bun run ki:server:mcp:dev      # bun --watch mode (NODE_ENV=development)
+bun run ki:server:mcp:start    # build then run from dist/ under node
+bun run ki:server:mcp:inspect  # MCP Inspector against TS source (NODE_ENV=development)
 bun run test                # vitest (use `bun run test`, not `bun test`)
-bun run lint:types          # tsc --noEmit
-bun run lint:check          # Biome lint + format check
-bun run lint:fix            # Biome auto-fix (uses --unsafe)
-bun run lint:md             # prettier + markdownlint for *.md
+bun run ki:lint:types          # tsc --noEmit
+bun run ki:lint:check          # Biome lint + format check
+bun run ki:lint:fix            # Biome auto-fix (uses --unsafe)
+bun run ki:lint:md             # prettier + markdownlint for *.md
 ```
 
 ## Security Model
@@ -306,7 +306,7 @@ bun run lint:md             # prettier + markdownlint for *.md
 **`MCP_KI_KB_FS_ROOT_PATH environment variable must be set`**
 
 The server aborts at startup if `MCP_KI_KB_FS_ROOT_PATH` is missing. Set it in the Claude Desktop config `env` block, or as a shell variable
-for `bun run server:mcp:dev`.
+for `bun run ki:server:mcp:dev`.
 
 **`MCP_KI_KB_FS_ROOT_PATH not accessible: <path>`**
 
