@@ -12,8 +12,7 @@ cd mcp-kb-fs
 bun install
 ```
 
-`bun install` triggers `prepare` which configures the husky pre-commit hook — so every commit will auto-run `lint-staged` and format your
-changes.
+`bun install` triggers `prepare` which configures the husky pre-commit hook — so every commit will auto-run `lint-staged` and format your changes.
 
 ## Dev loop
 
@@ -33,20 +32,16 @@ bun run ki:lint:md             # prettier + markdownlint for *.md
 
 ### Code
 
-- **TypeScript ES modules** — `"type": "module"`, internal imports use `.js` extensions (e.g. `from '../../main/notes/index.js'`) so `tsc`
-  emits valid JS.
+- **TypeScript ES modules** — `"type": "module"`, internal imports use `.js` extensions (e.g. `from '../../main/notes/index.js'`) so `tsc` emits valid JS.
 - **Arrow functions** for top-level declarations (`export const foo = () => …`).
-- **Config injection**: nothing reads `process.env` at import time. `loadConfig()` (in `src/config/index.ts`) returns a plain `Config`;
-  `src/main/` functions take it (or the slice they need) as their first argument. Tests build a `Config` literal — no env mutation.
-- **Strict path safety**: any tool input that touches the filesystem must go through `resolveWithinRoot(cfg.rootPath, …)` from
-  `src/utils/utils.ts`. Inputs that resolve outside the root throw `Path escapes root`.
+- **Config injection**: nothing reads `process.env` at import time. `loadConfig()` (in `src/config/index.ts`) returns a plain `Config`; `src/main/` functions take it (or the slice they need) as their first argument. Tests build a `Config` literal — no env mutation.
+- **Strict path safety**: any tool input that touches the filesystem must go through `resolveWithinRoot(cfg.rootPath, …)` from `src/utils/utils.ts`. Inputs that resolve outside the root throw `Path escapes root`.
 - **Errors**: tools return MCP errors via `errorResult(...)`; structured results via `jsonResult(...)`.
 - **Annotations**: be honest with `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` on every tool registration.
 
 ### Commits
 
-This repo uses [Conventional Commits](https://www.conventionalcommits.org/) so version bumps are easy to derive when releasing by hand.
-There is no auto-release pipeline.
+This repo uses [Conventional Commits](https://www.conventionalcommits.org/) so version bumps are easy to derive when releasing by hand. There is no auto-release pipeline.
 
 | Type        | What it means           | Bumps |
 | ----------- | ----------------------- | ----- |
@@ -65,11 +60,8 @@ Add `!` for breaking changes (`feat!:` / `fix!:`) — bumps major.
 
 ### Testing
 
-- New code should ship with tests. Vitest is configured with V8 coverage and has thresholds in `vitest.config.ts` — if your change drops
-  coverage below the threshold, CI fails. The aggregators (`src/mcp-server/index.ts`, `src/tools/**/index.ts`) and the pure-data
-  `src/utils/annotations.ts` are excluded; everything else stays fully covered. Tests are co-located (`index.test.ts` beside `index.ts`).
-- Config is injected, not read from env: tests build a `Config` literal (or call `loadConfig` with an explicit env object) and pass it into
-  the `main/` function. FS-touching tests point `rootPath` at a per-process tmpdir and clean up with `beforeEach`/`afterEach`.
+- New code should ship with tests. Vitest is configured with V8 coverage and has thresholds in `vitest.config.ts` — if your change drops coverage below the threshold, CI fails. The aggregators (`src/mcp-server/index.ts`, `src/tools/**/index.ts`) and the pure-data `src/utils/annotations.ts` are excluded; everything else stays fully covered. Tests are co-located (`index.test.ts` beside `index.ts`).
+- Config is injected, not read from env: tests build a `Config` literal (or call `loadConfig` with an explicit env object) and pass it into the `main/` function. FS-touching tests point `rootPath` at a per-process tmpdir and clean up with `beforeEach`/`afterEach`.
 
 ## Before opening a PR
 
